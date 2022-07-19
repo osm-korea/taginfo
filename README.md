@@ -7,10 +7,10 @@ and browsable.
 [Taginfo](https://wiki.openstreetmap.org/wiki/Taginfo) page at the OpenStreetMap
 wiki.
 
-**Live System:** [taginfo.openstreetmap.org](https://taginfo.openstreetmap.org/)
+**Live System:** [taginfo.osm.kr](https://taginfo.osm.kr/)
 
 There is no versioning of these tools. The official site always runs the
-version tagged `osmorg-taginfo-live`. If you are using the tools, we encourage
+version tagged `osmkr-taginfo-live`. If you are using the tools, we encourage
 you to stay up-to-date with that version also. But monitor your setup closely
 when you switch to a new version, sometimes things can break.
 
