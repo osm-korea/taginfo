@@ -160,18 +160,17 @@ class Taginfo < Sinatra::Base
             out[n] = { :type => type, :count => 0, :count_fraction => 0.0, :values => 0 }
         end
 
-        @db.select('SELECT * FROM db.keys').
-            condition('key = ?', key).
-            execute() do |row|
-                ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
-                    out[n] = {
-                        :type           => type,
-                        :count          => row['count_'  + type].to_i,
-                        :count_fraction => (row['count_'  + type].to_f / get_total(type)).round(4),
-                        :values         => row['values_' + type].to_i
-                    }
-                end
+        row = @db.select('SELECT * FROM db.keys').condition('key = ?', key).get_first_row()
+        if row
+            ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
+                out[n] = {
+                    :type           => type,
+                    :count          => row['count_' + type].to_i,
+                    :count_fraction => (row['count_' + type].to_f / get_total(type)).round(4),
+                    :values         => row['values_' + type].to_i
+                }
             end
+        end
 
         return generate_json_result(4, out);
     end
@@ -267,6 +266,58 @@ class Taginfo < Sinatra::Base
                 :description => wikidesc[row['value']] ? wikidesc[row['value']][0] : '',
                 :desclang    => wikidesc[row['value']] ? wikidesc[row['value']][1] : '',
                 :descdir     => wikidesc[row['value']] ? wikidesc[row['value']][2] : ''
+            } }
+        )
+    end
+
+    api(4, 'key/prevalent_values', {
+        :description => 'Get most prevalent values used with a given key.',
+        :parameters => {
+            :key => 'Tag key (required).',
+            :min_fraction => 'Only return values which are used in at least this percent of all objects with this key (optional, default = 0.01).'
+        },
+        :paging => :no,
+        :filter => {
+            :all       => { :doc => 'No filter.' },
+            :nodes     => { :doc => 'Only values on tags used on nodes.' },
+            :ways      => { :doc => 'Only values on tags used on ways.' },
+            :relations => { :doc => 'Only values on tags used on relations.' }
+        },
+        :result => paging_results([
+            [:value,       :STRING, 'Value'],
+            [:count,       :INT,    'Number of times this key/value is in the OSM database.'],
+            [:fraction,    :FLOAT,  'Number of times in relation to number of times this key is in the OSM database.']
+        ]),
+        :example => { :key => 'highway', :filter => 'ways' },
+        :ui => '/keys/highway#overview',
+        :notes => 'Returns an additional row with <i>value null</i> and <i>count</i> the sum of the counts for all values not listed.'
+    }) do
+        key = params[:key]
+        min_fraction = 0.01
+        if params[:min_fraction]
+            min_fraction = params[:min_fraction].to_f
+        end
+        filter_type = get_filter()
+
+        count_all_values = @db.select("SELECT count_#{filter_type} FROM db.keys").
+            condition('key = ?', key).get_first_i
+
+        res = @db.select("SELECT value, count_#{filter_type} AS count FROM db.tags").
+            condition('key = ?', key).
+            condition('count > ?', (count_all_values * min_fraction).to_i).
+            order_by([:count], 'DESC').
+            execute()
+
+        total = res.inject(0){ |sum, x| sum += x['count'].to_i }
+        if total < count_all_values
+            res << { 'value' => nil, 'count' => count_all_values - total }
+        end
+
+        return generate_json_result(res.length,
+            res.map{ |row| {
+                :value    => row['value'],
+                :count    => row['count'].to_i,
+                :fraction => (row['count'].to_f / count_all_values.to_f).round(4)
             } }
         )
     end
@@ -417,6 +468,91 @@ class Taginfo < Sinatra::Base
         data = unpack_chronology(res)
 
         return generate_json_result(data.size(), data);
+    end
+
+    api(4, 'key/overview', {
+        :description => 'Show various data for given key.',
+        :parameters => { :key => 'Tag key (required).' },
+        :result => [
+            [ :total,      :INT, 'Total number of results (always 1).' ],
+            [ :url,        :STRING, 'URL of the request.' ],
+            [ :data_until, :STRING, 'All changes in the source until this date are reflected in this taginfo result.' ],
+            [ :data,       :HASH, 'Hash with data.', [
+                [:key,              :STRING, 'The tag key that was requested.'],
+                [:projects,         :INT, 'Number of projects mentioning this key.'],
+                [:users,            :INT, 'Number of users last editing objects with this key.'],
+                [:wiki_pages,       :ARRAY_OF_HASHES, 'Language codes for which wiki pages about this key are available.', [
+                    [:lang,    :STRING, 'Language code.'],
+                    [:english, :STRING, 'English name of this language.'],
+                    [:native,  :STRING, 'Native name of this language.'],
+                    [:dir,     :STRING, 'Printing direction for native name ("ltr", "rtl", or "auto")'],
+                ]],
+                [:has_map,          :BOOL, 'Is a map with the geographical distribution of this key available?'],
+                [:counts,           :ARRAY_OF_HASHES, 'Objects counts.', [
+                    [:type,           :STRING, 'Object type ("all", "nodes", "ways", or "relations")'],
+                    [:count,          :INT,    'Number of objects with this type and key.'],
+                    [:count_fraction, :FLOAT,  'Number of objects in relation to all objects.'],
+                    [:values,         :INT,    'Number of different values for this key.']
+                ]],
+                [:description,      :HASH_OF_HASHES, 'Description of this key (hash key is language code).', [
+                    [:text, :STRING, 'Description text.' ],
+                    [:dir,  :STRING, 'Printing direction for this language ("ltr", "rtl", or "auto").' ]
+                ]],
+                [:prevalent_values, :ARRAY_OF_HASHES, 'Prevalent values ordered by count from most often used down.', [
+                    [:value,    :STRING, 'The tag value.' ],
+                    [:count,    :INT,    'Number of objects with this tag value.' ],
+                    [:fraction, :FLOAT,  'Fraction of number of objects with this tag value compared to all objects.' ],
+                ]],
+            ]]
+        ],
+        :example => { :key => 'amenity' },
+        :ui => '/keys/amenity#overview'
+    }) do
+        key = params[:key]
+        data = { :key => key, :counts => [] }
+
+        # default values
+        ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
+            data[:counts][n] = { :type => type, :count => 0, :count_fraction => 0.0, :values => 0 }
+        end
+
+        row = @db.select('SELECT * FROM db.keys').condition('key = ?', key).get_first_row()
+        if row
+            ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
+                data[:counts][n] = {
+                    :type           => type,
+                    :count          => row['count_' + type].to_i,
+                    :count_fraction => (row['count_' + type].to_f / get_total(type)).round(4),
+                    :values         => row['values_' + type].to_i,
+                }
+            end
+            data[:projects] = row['projects'].to_i
+            data[:users] = row['users_all'].to_i
+        end
+
+        data[:prevalent_values] = @db.select("SELECT value, count, fraction FROM db.prevalent_values").
+            condition('key = ?', key).
+            order_by([:count], 'DESC').
+            execute().map{ |row| { 'value' => row['value'], 'count' => row['count'].to_i, 'fraction' => row['fraction'].to_f } }
+
+        data[:wiki_pages] = @db.select("SELECT DISTINCT lang FROM wiki.wikipages WHERE key=? AND value IS NULL ORDER BY lang", key).execute().map do |row|
+            lang = row['lang']
+            {
+                :lang    => lang,
+                :english => ::Language[lang].english_name,
+                :native  => ::Language[lang].native_name,
+                :dir     => direction_from_lang_code(lang)
+            }
+        end
+
+        data[:has_map] = data[:counts][0][:count] > 0
+
+        data[:description] = {}
+        @db.select("SELECT description, lang FROM wiki.wikipages WHERE key=? AND value IS NULL AND description IS NOT NULL ORDER BY lang", key).execute().each{ |row|
+            data[:description][row['lang']] = { :text => row['description'], :dir => direction_from_lang_code(row['lang']) }
+        }
+
+        return generate_json_result(1, data);
     end
 
 end
