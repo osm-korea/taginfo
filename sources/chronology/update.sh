@@ -33,13 +33,16 @@ run_chronology() {
     if [[ -f $SELECTION_DB && -s $SELECTION_DB ]]; then
         open_selection_db="--selection-db=$SELECTION_DB"
         print_message "Reading selection database '$SELECTION_DB'"
+
+        print_message "Running taginfo-chronology... "
+        run_exe "$cmd" "$open_selection_db" "$OSM_HISTORY_FILE" "$DATABASE"
     else
         print_message "Selection database '$SELECTION_DB' not found. Not creating some statistics."
         print_message "  The next taginfo update should automatically correct this."
-    fi
 
-    print_message "Running taginfo-chronology... "
-    run_exe "$cmd" "$open_selection_db" "$OSM_HISTORY_FILE" "$DATABASE"
+        print_message "Running taginfo-chronology... "
+        run_exe "$cmd" "$OSM_HISTORY_FILE" "$DATABASE"
+    fi
 }
 
 main() {
