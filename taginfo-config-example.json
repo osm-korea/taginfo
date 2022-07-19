@@ -1,22 +1,19 @@
-// This is an example of a taginfo config file.
-// Copy it to the directory above and name it 'taginfo-config.json', then change your local settings.
 {
-    // You probably want to change all these.
     "instance": {
         // URL prefix for the site.
-        "url": "http://localhost:4567",
+        "url": "https://taginfo.osm.kr",
         // Used in the title of all HTML pages.
-        "name": "OpenStreetMap Taginfo",
+        "name": "OpenStreetMap Taginfo for South Korea",
         // Description of this taginfo instance. Will appear on the home page and about page.
-        "description": "This is a <b>taginfo test instance</b>. Change this text in your <tt>taginfo-config.json</tt>.",
+        "description": "This is a <b>taginfo instance for South Korea</b>.",
         // Additional description that will only appear on the about page.
-        "about": "<p>This site is maintained by XXX.</p><p>There isn't just one taginfo site, there are several. The main site is at <a class='extlink' href='https://taginfo.openstreetmap.org/'>taginfo.openstreetmap.org</a>, but several <a class='extlink' href='https://wiki.openstreetmap.org/wiki/Taginfo/Sites'>other taginfo sites</a> are operated by different people.</p>",
+        "about": "<p>This site is maintained by Dongha Hwang (LuxuryCoop).</p><p>There isn't just one taginfo site, there are several. The main site is at <a class='extlink' href='https://taginfo.openstreetmap.org/'>taginfo.openstreetmap.org</a>, but several <a class='extlink' href='https://wiki.openstreetmap.org/wiki/Taginfo/Sites'>other taginfo sites</a> are operated by different people.</p>",
         // URL path to instance icon in the upper left.
-        "icon": "/img/logo/test.png",
+        "icon": "/img/logo/kr.svg",
         // Contact name and email address.
-        "contact": "Anonymous",
+        "contact": "depth221 at gmail",
         // Geographical area this taginfo instance covers.
-        "area": "World",
+        "area": "South Korea",
         // Add CORS header Access-Control-Allow-Origin with the given value
         // to all /api responses. Use "" to not set this header, disallowing
         // external services to use your API from a browser. Set to "*" to
@@ -27,31 +24,31 @@
     },
     // For the geodistribution map. See the wiki documentation about these settings.
     "geodistribution": {
-        "left": -180,
-        "bottom": -90,
-        "right": 180,
-        "top": 90,
-        "width": 360,
-        "height": 180,
+        "left": 123,
+        "bottom": 33,
+        "right": 132,
+        "top": 39,
+        "width": 300,
+        "height": 200,
         "scale_image": 2,
         "scale_compare_image" : 1,
-        "background_image": "/img/mapbg/world.png",
+        "background_image": "/img/mapbg/korea.png",
         // optional attribution for base image, will show up below all maps
-        "image_attribution": ""
+        "image_attribution": "OpenStreetMap Contributors"
     },
     "paths": {
         // Directory where the database files for use by taginfo are kept.
-        "data_dir": "../../data",
+        "data_dir": "/home/ubuntu/osm/data",
         // Directory for the compressed database files for download. If you
         // change this, you might have also to change the "download" symbolic
         // link in the "web/public" directory and/or add this path to your
         // web server config.
-        "download_dir": "../../download",
+        "download_dir": "/home/ubuntu/osm/download",
         // Path to binaries (like 'taginfo-stats' and 'taginfo-similarity').
         // Probably something like '.../taginfo-tools/build/src'. If this is
         // a relative path, it must be relative to the subdirectory of the
         // 'sources' directory.
-        "bin_dir": "../../../taginfo-tools/build/src",
+        "bin_dir": "/home/ubuntu/osm/taginfo-tools/build/src",
         // Path to sqlite regexp extension.
         "sqlite3_pcre_extension": "/usr/lib/sqlite3/pcre.so"
     },
@@ -81,8 +78,8 @@
     },
     "opensearch": {
         // For the OpenSearchDescription. You have to change at least the shortname and the contact for your instance.
-        "shortname": "Taginfo Test Instance",
-        "contact": "somebody@example.com",
+        "shortname": "Taginfo Instance for South Korea",
+        "contact": "depth221 at gmail",
         "description": "Find metadata about OpenStreetMap tags",
         "tags": "osm openstreetmap tag tags taginfo"
     },
@@ -91,16 +88,16 @@
         // Note that this will NOT work for the "db" source! Well, you can download it,
         // but it will fail later, because the database is changed by the master.sql
         // scripts.
-        "download": "languages projects wiki chronology",
+        "download": "languages projects wiki",
         // These sources will be created from the actual sources.
-        "create": "db",
+        "create": "db chronology",
         "db": {
             // The OSM planet file or extract where we read the OSM data from.
-            "planetfile": "/osm/planet/var/current-planet.osm.pbf"
+            "planetfile": "/home/ubuntu/osm/data/south-korea-latest.osm.pbf"
         },
         "chronology": {
             // The OSM history planet file or extract where we read the OSM data from.
-            "osm_history_file": "/osm/planet/var/current-history-planet.osh.pbf"
+            "osm_history_file": "/home/ubuntu/osm/data/south-korea-internal.osh.pbf"
         },
         // If you change any of the following you have to run the update
         // twice for it to take effect.
@@ -108,15 +105,15 @@
             // Minimum number of occurances of a tag to make it
             // potentially "interesting", ie. create tag combination
             // statistics for it.
-            "min_count_tags": 10000,
+            "min_count_tags": 100,
             // Tag combinations not appearing this often are not written to database.
-            "min_tag_combination_count": 1000,
+            "min_tag_combination_count": 10,
             // Minimum number of tag occurances for creating a map
-            "min_count_for_map": 1000,
+            "min_count_for_map": 10,
             // Minimum number of relations per type to make this
             // relation type "interesting", ie. to make it show
             // up as a relation type.
-            "min_count_relations_per_type": 100
+            "min_count_relations_per_type": 5
         }
     },
     "logging": {
@@ -131,6 +128,6 @@
         // size of OSM file, but may need a bit more memory than other values.
         // For really large OSM files (whole planet or large continent)
         // this should be "DenseMmapArray" (or "DenseMemArray" on OSX), otherwise "SparseMemArray".
-        "geodistribution": "FlexMem"
+        "geodistribution": "SparseMemArray"
     }
 }
