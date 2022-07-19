@@ -45,7 +45,8 @@ $ sudo bundle install
 
 Depending on your setup you might want to install an application server like
 * [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/) or
-* Apache2 `mod_passenger`
+* Apache2 `mod_passenger` or
+* [thin](https://github.com/macournoyer/thin)
 
 If you want to create the taginfo database yourself, you need to have
 https://github.com/taginfo/taginfo-tools installed. See there for details.
@@ -73,7 +74,7 @@ cd web
 ./taginfo.rb
 ```
 
-You can also use it via [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/).
+You can also use it via [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/),
 
 ```sh
 cd web
@@ -82,6 +83,21 @@ uwsgi uwsgi.ini
 
 You can change various settings in the [config file](web/uwsgi.ini) and use
 it through a web server like Apache2 or Nginx.
+
+You can do that via [thin](https://github.com/macournoyer/thin).
+you should edit `myapp.site.com` txt file, from '/path/to/taginfo' to a proper path.
+
+```sh
+sudo cp myapp.site.com /etc/thin/
+thin start -C /etc/thin/myapp.site.com
+```
+
+You can restart the instances via
+```sh
+thin restart -C /etc/thin/myapp.site.com
+```
+
+
 
 
 ## Javascript
