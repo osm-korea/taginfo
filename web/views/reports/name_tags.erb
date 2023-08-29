@@ -3,8 +3,8 @@
     @sel = Hash.new('')
     @sel[@filter_type] = ' selected="selected"'
 %>
-<div class="pre ui-helper-clearfix">
-    <div id="pre-text">
+<div>
+    <div>
         <h1><%= h(t.reports.name_tags.name) %></h1>
         <%= t.reports.name_tags.intro %>
     </div>
@@ -16,15 +16,12 @@
     </ul>
     <div id="overview">
         <h2><%= h(t.reports.name_tags.overview.title) %></h2>
-        <div class="boxpre">
-            <p>Tag keys containing "name".</p>
-        </div>
-        <table id="grid-name">
-        </table>
+        <div><p>Tag keys containing "name".</p></div>
+        <div id="grid-name"></div>
     </div>
     <div id="bcp47">
         <h2><%= h(t.reports.name_tags.bcp47.title) %></h2>
-        <div class="boxpre">
+        <div>
             <%= t.reports.name_tags.bcp47.intro %>
             <form id="subtag-filter-form">
                 <label for="subtag-filter"><%= h(t.reports.name_tags.bcp47.filter.label) %>:</label>
@@ -36,7 +33,6 @@
                 </select>
             </form>
         </div>
-        <table id="grid-bcp47-subtags">
-        </table>
+        <div id="grid-bcp47-subtags"></div>
     </div>
 </div>

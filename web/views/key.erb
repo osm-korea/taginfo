@@ -1,8 +1,4 @@
-<div class="pre ui-helper-clearfix">
-    <div id="pre-text">
-        <h1 data-key="<%= h(@key) %>"></h1>
-        <p><%= @desc %></p>
-    </div>
+<div>
     <div id="toolsmenu"></div>
     <form id="filter-form">
         <label for="filter"><%= h(t.pages.key.filter.label) %></label>
@@ -36,7 +32,13 @@
             <li class="button disabled" title="<%= h(t.pages.key.button_disabled) %>">Level0 Editor</li>
 <% end %>
             <li class="button"><%= turbo_link(@count_all_values, @filter_type, @key) %></li>
+            <li class="button"><a target="_blank" id="osm-tag-history-button">OSM Tag History</a></li>
+            <li class="button"><a target="_blank" id="ohsome-button">ohsome</a></li>
         </ul>
+    </div>
+    <div>
+        <h1></h1>
+        <p><%= @desc %></p>
     </div>
 </div>
 <div id="tabs">
@@ -45,7 +47,7 @@
         <li><a href="#values"><%= h(t.osm.values) %></a></li>
         <li><a href="#combinations"><%= h(t.taginfo.key_combinations) %></a></li>
         <li><a href="#similar"><%= h(t.pages.key.similar.tab) %></a></li>
-<% if Source.get(:chronology) %>
+<% if @sources.get(:chronology) %>
         <li><a href="#chronology"><%= h(t.taginfo.chronology) %></a></li>
 <% end %>
         <li><a href="#map"><%= h(t.taginfo.map) %></a></li>
@@ -56,7 +58,7 @@
     <div id="overview">
         <div style="float: right; text-align: center; padding-left: 20px;">
             <p><%= h(t.pages.key.overview.distribution_of_values) %></p>
-            <div class="canvas" id="canvas-values" data-count="<%= @count_all_values %>"></div>
+            <div class="canvas" id="canvas-values"></div>
         </div>
 <% if @image_url %>
         <div class="wiki_image">
@@ -64,28 +66,22 @@
         </div>
 <% end %>
         <h2><%= h(t.taginfo.overview) %></h2>
-        <table id="grid-overview">
-        </table>
-        <p><span title="<%= h(t.pages.key.overview.no_endorsement) %>" tipsy="n"><%= t.pages.key.overview.objects_last_edited_by(@user_count.to_s_with_ts) %></span></p>
+        <div id="grid-overview"></div>
+        <p><span title="<%= h(t.pages.key.overview.no_endorsement) %>" data-tooltip-position="OnBottom"><%= t.pages.key.overview.objects_last_edited_by(@user_count.to_s_with_ts) %></span></p>
     </div>
     <div id="values">
         <h2><%= h(t.pages.key.values_used) %></h2>
-        <div>
-            <table id="grid-values">
-            </table>
-        </div>
+        <div id="grid-values"></div>
     </div>
     <div id="combinations">
         <h2><%= h(t.pages.key.other_keys_used.title) %></h2>
-        <table id="grid-keys">
-        </table>
+        <div id="grid-combinations"></div>
     </div>
     <div id="similar">
         <h2><%= h(t.pages.key.similar.title) %></h2>
-        <table id="grid-similar">
-        </table>
+        <div id="grid-similar"></div>
     </div>
-<% if Source.get(:chronology) %>
+<% if @sources.get(:chronology) %>
     <div id="chronology">
         <h2><%= h(t.taginfo.chronology) %></h2>
         <div id="chart-chronology"></div>
@@ -95,21 +91,24 @@
         <h2><%= h(t.pages.key.geographic_distribution.title) %></h2>
         <% if @filter_type == 'all' %>
             <p><%= h(t.pages.key.geographic_distribution.all) %></p>
-            <div style="background-image: url(<%= @taginfo_config.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
-                <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>" style="position: absolute;"/>
-                <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+            <div class="multi-map">
+                <img class="map" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
+                <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" style="max-width: <%= @img_width %>px; z-index: 2;"/>
+                <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" style="max-width: <%= @img_width %>px; z-index: 3; position: relative;"/>
                 <div class="note"><%= @taginfo_config.get('geodistribution.image_attribution') %></div>
             </div>
         <% elsif @filter_type == 'nodes' %>
             <p><%= h(t.pages.key.geographic_distribution.nodes) %></p>
-            <div style="background-image: url(<%= @taginfo_config.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
-                <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+            <div class="multi-map">
+                <img class="map" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
+                <img class="map" src="/api/4/key/distribution/nodes?key=<%= @key_uri %>" alt="" style="max-width: <%= @img_width %>px; z-index: 2; position: relative;"/>
                 <div class="note"><%= @taginfo_config.get('geodistribution.image_attribution') %></div>
             </div>
         <% elsif @filter_type == 'ways' %>
             <p><%= h(t.pages.key.geographic_distribution.ways) %></p>
-            <div style="background-image: url(<%= @taginfo_config.get('geodistribution.background_image') %>); background-repeat: no-repeat; background-position: 1px 1px;"/>
-                <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
+            <div class="multi-map">
+                <img class="map" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
+                <img class="map" src="/api/4/key/distribution/ways?key=<%= @key_uri %>" alt="" style="max-width: <%= @img_width %>px; z-index: 3; position: relative;"/>
                 <div class="note"><%= @taginfo_config.get('geodistribution.image_attribution') %></div>
             </div>
         <% elsif @filter_type == 'relations' %>
@@ -119,8 +118,7 @@
     <div id="wiki">
         <h2><%= h(t.pages.key.wiki_pages.title) %></h2>
         <% if @wiki_count > 0 %>
-            <table id="grid-wiki">
-            </table>
+            <div id="grid-wiki"></div>
         <% else %>
             <p class="empty"><%= h(t.pages.key.wiki_pages.none_found) %></p>
             <p><a class="extlink" target="_blank" rel="nofollow" href="//wiki.openstreetmap.org/w/index.php?action=edit&title=Key:<%= @key_uri %>"><%= h(t.pages.key.wiki_pages.create) %></a></p>
@@ -128,12 +126,10 @@
     </div>
     <div id="projects">
         <h2><%= h(t.pages.key.projects.title) %></h2>
-        <table id="grid-projects">
-        </table>
+        <div id="grid-projects"></div>
     </div>
     <div id="characters">
         <h2><%= h(t.pages.key.characters.title) %></h2>
-        <table id="grid-characters">
-        </table>
+        <div id="grid-characters"></div>
     </div>
 </div>

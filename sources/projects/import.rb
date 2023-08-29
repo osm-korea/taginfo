@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
-# coding: utf-8
 #------------------------------------------------------------------------------
 #
 #  Taginfo source: Projects
@@ -8,7 +7,7 @@
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2014-2017  Jochen Topf <jochen@topf.org>
+#  Copyright (C) 2014-2023  Jochen Topf <jochen@topf.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -40,9 +39,9 @@ project_list = ARGV[1] || 'project_list.txt'
 #------------------------------------------------------------------------------
 
 projects = []
-open(project_list) do |file|
+File.open(project_list) do |file|
     file.each do |line|
-        projects << line.chomp.split(' ')
+        projects << line.chomp.split
     end
 end
 
@@ -60,7 +59,7 @@ def fetch(uri_str, limit = 10)
     response = http.request(request)
 
     case response
-    when Net::HTTPRedirection then
+    when Net::HTTPRedirection
         location = response['location']
         puts "    redirect to #{location}"
         fetch(location, limit - 1)
@@ -75,29 +74,30 @@ projects.each do |id, url|
         response = fetch(url)
         begin
             last_modified = Time.parse(response['Last-Modified'] || response['Date']).utc.iso8601
-        rescue
+        rescue ArgumentError
             last_modified = Time.now.utc
         end
-        db.execute("INSERT INTO projects (id, json_url, last_modified, fetch_date, fetch_status, fetch_json, status, data_updated) VALUES (?, ?, ?, ?, CAST(? AS TEXT), ?, ?, ?)", [
-            id,
-            url,
-            last_modified,
-            Time.now.utc.iso8601,
-            response.code,
-            response.body,
-            (response.code == '200' ? 'OK' : 'FETCH ERROR'),
-            last_modified
-        ])
-    rescue
-        db.execute("INSERT INTO projects (id, json_url, fetch_date, fetch_status, status) VALUES (?, ?, ?, ?, ?)", [
-            id,
-            url,
-            Time.now.utc.iso8601,
-            '500',
-            'FETCH ERROR'
-        ])
+        db.execute("INSERT INTO projects (id, json_url, last_modified, fetch_date, fetch_status, fetch_json, status, data_updated) VALUES (?, ?, ?, ?, CAST(? AS TEXT), ?, ?, ?)",
+                   [
+                       id,
+                       url,
+                       last_modified,
+                       Time.now.utc.iso8601,
+                       response.code,
+                       response.body,
+                       (response.code == '200' ? 'OK' : 'FETCH ERROR'),
+                       last_modified
+                   ])
+    rescue StandardError
+        db.execute("INSERT INTO projects (id, json_url, fetch_date, fetch_status, status) VALUES (?, ?, ?, ?, ?)",
+                   [
+                       id,
+                       url,
+                       Time.now.utc.iso8601,
+                       '500',
+                       'FETCH ERROR'
+                   ])
     end
 end
-
 
 #-- THE END -------------------------------------------------------------------

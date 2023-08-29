@@ -254,6 +254,8 @@ pages:
                 <p>Projects that use OSM tags in some way, such as editors, maps, routers, etc. See <a href="projects">the project list</a>.</p>
             chronology: |
                 <p>Number of keys/tags over time from <a class="extlink" href="https://planet.openstreetmap.org/planet/full-history/">history planet</a>.</p>
+            wikidata: |
+                <p>The <a class="extlink" href="https://www.wikidata.org/">Wikimedia wikidata database</a> connects OSM keys, tags, and relations to other concepts.</p>
         updates:
             title: Updates
             intro: The taginfo data is updated regularly from the sources.
@@ -446,7 +448,7 @@ pages:
             count_all_tooltip: Number of objects in database with this key/tag
             objects_tooltip: Object types the project uses
 
-flexigrid:
+dynamic_table:
     pagetext: Page
     pagestat: Displaying {from} to {to} of {total} items
     outof: of
@@ -454,6 +456,7 @@ flexigrid:
     procmsg: Processing, please wait...
     nomsg: No items
     errormsg: Connection Error
+    filter_nothing_found: Nothing found matching your query.
 
 comparison:
     list: Comparison list
@@ -485,6 +488,9 @@ sources:
     chronology:
         name: Chronology
         description: Number of keys/tags over time from OSM history data.
+    wikidata:
+        name: Wikidata
+        description: The Wikimedia wikidata database connects OSM keys, tags, and relations to other concepts.
 
 unicode:
     character: Char

@@ -14,7 +14,7 @@ class Taginfo < Sinatra::Base
             :ways      => { :doc => 'Only values on tags used on ways.' },
             :relations => { :doc => 'Only values on tags used on relations.' }
         },
-        :sort => %w( together_count other_key from_fraction ),
+        :sort => %w[ together_count other_key from_fraction ],
         :result => paging_results([
             [:other_key,      :STRING, 'Other key.'],
             [:together_count, :INT,    'Number of objects that have both keys.'],
@@ -25,12 +25,12 @@ class Taginfo < Sinatra::Base
         :ui => '/keys/highway#combinations'
     }) do
         key = params[:key]
-        filter_type = get_filter()
+        filter_type = get_filter
 
         if @ap.sortname == 'to_count'
             @ap.sortname = ['together_count']
         elsif @ap.sortname == 'from_count'
-            @ap.sortname = ['from_fraction', 'together_count', 'other_key']
+            @ap.sortname = %w[ from_fraction together_count other_key ]
         end
 
         cq = @db.count('db.key_combinations')
@@ -43,28 +43,29 @@ class Taginfo < Sinatra::Base
 
         has_this_key = @db.select("SELECT count_#{filter_type} FROM db.keys").
             condition('key = ?', key).
-            get_first_value()
+            get_first_value
 
         res = (params[:query].to_s != '' ?
             @db.select("SELECT p.key1 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key1=k.key AND p.key2=? AND (p.key1 LIKE ? ESCAPE '@') AND p.count_#{filter_type} > 0
                     UNION SELECT p.key2 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key2=k.key AND p.key1=? AND (p.key2 LIKE ? ESCAPE '@') AND p.count_#{filter_type} > 0", key, like_contains(params[:query]), key, like_contains(params[:query])) :
             @db.select("SELECT p.key1 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key1=k.key AND p.key2=? AND p.count_#{filter_type} > 0
                     UNION SELECT p.key2 AS other_key, p.count_#{filter_type} AS together_count, k.count_#{filter_type} AS other_count, CAST(p.count_#{filter_type} AS REAL) / k.count_#{filter_type} AS from_fraction FROM db.key_combinations p, db.keys k WHERE p.key2=k.key AND p.key1=? AND p.count_#{filter_type} > 0", key, key)).
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.together_count
                 o.other_key
                 o.from_fraction
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         return generate_json_result(total,
-            res.map{ |row| {
+            res.map do |row| {
                 :other_key      => row['other_key'],
                 :together_count => row['together_count'].to_i,
                 :to_fraction    => (row['together_count'].to_f / has_this_key.to_f).round(4),
                 :from_fraction  => row['from_fraction'].to_f.round(4)
-            } }
+            }
+            end
         )
     end
 
@@ -75,7 +76,7 @@ class Taginfo < Sinatra::Base
             :query => 'Only show results where the other_key matches this query (substring match, optional).'
         },
         :paging => :optional,
-        :sort => %w( other_key count_all similarity ),
+        :sort => %w[ other_key count_all similarity ],
         :result => paging_results([
             [:other_key,  :STRING, 'Other key.'],
             [:count_all,  :INT,    'Number of objects that have the other key.'],
@@ -92,7 +93,7 @@ class Taginfo < Sinatra::Base
                                                                           OR (s.key2 LIKE ? ESCAPE '@') AND s.key1=?", query, key, query, key).get_first_i
         else
             total = @db.count('db.similar_keys').
-                        condition("key1=? OR key2=?", key, key).
+                        condition('key1=? OR key2=?', key, key).
                         get_first_i
         end
 
@@ -101,22 +102,23 @@ class Taginfo < Sinatra::Base
                   UNION SELECT key2 AS other_key, count_all2 AS count_all, similarity FROM db.similar_keys WHERE (key2 LIKE ? ESCAPE '@') AND key1=?", query, key, query, key) :
             @db.select("SELECT key1 AS other_key, count_all1 AS count_all, similarity FROM db.similar_keys WHERE key2=?
                   UNION SELECT key2 AS other_key, count_all2 AS count_all, similarity FROM db.similar_keys WHERE key1=?", key, key)).
-                    order_by(@ap.sortname, @ap.sortorder) { |o|
+                    order_by(@ap.sortname, @ap.sortorder) do |o|
                         o.similarity :similarity
                         o.similarity :count_all
                         o.other_key
                         o.count_all :count_all
                         o.count_all :similarity
-                    }.
+                    end.
                     paging(@ap).
-                    execute()
+                    execute
 
         return generate_json_result(total,
-            rows.map{ |row| {
+            rows.map do |row| {
                 :other_key  => row['other_key'],
                 :count_all  => row['count_all'],
                 :similarity => row['similarity']
-            } }
+            }
+            end
         )
     end
 
@@ -156,13 +158,13 @@ class Taginfo < Sinatra::Base
         out = []
 
         # default values
-        ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
+        %w[ all nodes ways relations ].each_with_index do |type, n|
             out[n] = { :type => type, :count => 0, :count_fraction => 0.0, :values => 0 }
         end
 
-        row = @db.select('SELECT * FROM db.keys').condition('key = ?', key).get_first_row()
+        row = @db.select('SELECT * FROM db.keys').condition('key = ?', key).get_first_row
         if row
-            ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
+            %w[ all nodes ways relations ].each_with_index do |type, n|
                 out[n] = {
                     :type           => type,
                     :count          => row['count_' + type].to_i,
@@ -172,7 +174,7 @@ class Taginfo < Sinatra::Base
             end
         end
 
-        return generate_json_result(4, out);
+        return generate_json_result(4, out)
     end
 
     api(4, 'key/values', {
@@ -189,7 +191,7 @@ class Taginfo < Sinatra::Base
             :ways      => { :doc => 'Only values on tags used on ways.' },
             :relations => { :doc => 'Only values on tags used on relations.' }
         },
-        :sort => %w( value count_all count_nodes count_ways count_relations in_wiki ),
+        :sort => %w[ value count_all count_nodes count_ways count_relations in_wiki ],
         :result => paging_results([
             [:value,       :STRING, 'Value'],
             [:count,       :INT,    'Number of times this key/value is in the OSM database.'],
@@ -204,7 +206,7 @@ class Taginfo < Sinatra::Base
     }) do
         key = params[:key]
         language = params[:lang] || 'en'
-        filter_type = get_filter()
+        filter_type = get_filter
 
         if @ap.sortname == 'count'
             @ap.sortname = ['count_' + filter_type]
@@ -214,19 +216,28 @@ class Taginfo < Sinatra::Base
             condition('key = ?', key).
             get_columns(:count, :count_values)
 
+        if this_key_count.nil? or total.nil?
+            this_key_count = 0
+            total = 0
+        end
+
         if params[:query].to_s != ''
             total = @db.count('db.tags').
                 condition('key = ?', key).
                 condition_if_true("count_#{filter_type} > 0", filter_type != 'all').
                 condition_if("value LIKE ? ESCAPE '@'", like_contains(params[:query])).
-                get_first_value()
+                get_first_value
+        end
+
+        if total > 1000 and !@ap.do_paging?
+            halt 412, { :error => 'number of results too large, use paging' }.to_json
         end
 
         res = @db.select('SELECT * FROM db.tags').
             condition('key = ?', key).
             condition_if_true("count_#{filter_type} > 0", filter_type != 'all').
             condition_if("value LIKE ? ESCAPE '@'", like_contains(params[:query])).
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.value
                 o.count_all
                 o.count_nodes
@@ -234,9 +245,9 @@ class Taginfo < Sinatra::Base
                 o.count_relations
                 o.in_wiki :in_wiki
                 o.in_wiki! :value
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         values_with_wiki_page = res.select{ |row| row['in_wiki'].to_i != 0 }.map{ |row| "'" + SQLite3::Database.quote(row['value']) + "'" }.join(',')
 
@@ -251,14 +262,14 @@ class Taginfo < Sinatra::Base
                     condition('lang = ?', lang).
                     condition('key = ?', key).
                     condition("value IN (#{ values_with_wiki_page })").
-                    execute().each do |row|
+                    execute.each do |row|
                     wikidesc[row['value']] = [row['description'], lang, direction_from_lang_code(lang)]
                 end
             end
         end
 
         return generate_json_result(total,
-            res.map{ |row| {
+            res.map do |row| {
                 :value       => row['value'],
                 :count       => row['count_' + filter_type].to_i,
                 :fraction    => (row['count_' + filter_type].to_f / this_key_count.to_f).round(4),
@@ -266,7 +277,8 @@ class Taginfo < Sinatra::Base
                 :description => wikidesc[row['value']] ? wikidesc[row['value']][0] : '',
                 :desclang    => wikidesc[row['value']] ? wikidesc[row['value']][1] : '',
                 :descdir     => wikidesc[row['value']] ? wikidesc[row['value']][2] : ''
-            } }
+            }
+            end
         )
     end
 
@@ -274,7 +286,7 @@ class Taginfo < Sinatra::Base
         :description => 'Get most prevalent values used with a given key.',
         :parameters => {
             :key => 'Tag key (required).',
-            :min_fraction => 'Only return values which are used in at least this percent of all objects with this key (optional, default = 0.01).'
+            :min_fraction => 'Only return values which are used in at least this percent of all objects with this key (optional, default = 0.01, minimum 0.01).'
         },
         :paging => :no,
         :filter => {
@@ -296,8 +308,11 @@ class Taginfo < Sinatra::Base
         min_fraction = 0.01
         if params[:min_fraction]
             min_fraction = params[:min_fraction].to_f
+            if min_fraction < 0.01
+                halt 412, { :error => 'min_fraction must be >= 0.1' }.to_json
+            end
         end
-        filter_type = get_filter()
+        filter_type = get_filter
 
         count_all_values = @db.select("SELECT count_#{filter_type} FROM db.keys").
             condition('key = ?', key).get_first_i
@@ -306,7 +321,7 @@ class Taginfo < Sinatra::Base
             condition('key = ?', key).
             condition('count > ?', (count_all_values * min_fraction).to_i).
             order_by([:count], 'DESC').
-            execute()
+            execute
 
         total = res.inject(0){ |sum, x| sum += x['count'].to_i }
         if total < count_all_values
@@ -314,11 +329,12 @@ class Taginfo < Sinatra::Base
         end
 
         return generate_json_result(res.length,
-            res.map{ |row| {
+            res.map do |row| {
                 :value    => row['value'],
                 :count    => row['count'].to_i,
                 :fraction => (row['count'].to_f / count_all_values.to_f).round(4)
-            } }
+            }
+            end
         )
     end
 
@@ -375,7 +391,7 @@ class Taginfo < Sinatra::Base
             :ways      => { :doc => 'Only values on tags used on ways.' },
             :relations => { :doc => 'Only values on tags used on relations.' }
         },
-        :sort => %w( project_name tag ),
+        :sort => %w[ project_name tag ],
         :result => paging_results([
             [:project_id,       :STRING, 'Project ID'],
             [:project_name,     :STRING, 'Project name'],
@@ -395,7 +411,7 @@ class Taginfo < Sinatra::Base
     }) do
         key = params[:key]
         q = like_contains(params[:query])
-        filter_type = get_filter()
+        filter_type = get_filter
 
         total = @db.select('SELECT count(*) FROM projects.projects p, projects.project_tags t ON p.id=t.project_id').
             condition("status = 'OK'").
@@ -413,17 +429,17 @@ class Taginfo < Sinatra::Base
             condition_if("on_node = ?",                    filter_type == 'nodes'     ? 1 : '').
             condition_if("on_way = ? OR on_area = 1",      filter_type == 'ways'      ? 1 : '').
             condition_if("on_relation = ? OR on_area = 1", filter_type == 'relations' ? 1 : '').
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.project_name 'lower(p.name)'
                 o.project_name :value
                 o.tag :value
                 o.tag 'lower(p.name)'
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         return generate_json_result(total,
-            res.map{ |row| {
+            res.map do |row| {
                 :project_id       => row['project_id'],
                 :project_name     => row['name'],
                 :project_icon_url => row['project_icon_url'],
@@ -436,14 +452,15 @@ class Taginfo < Sinatra::Base
                 :description      => row['description'],
                 :doc_url          => row['doc_url'],
                 :icon_url         => row['icon_url']
-            } }
+            }
+            end
         )
     end
 
     api(4, 'key/chronology', {
         :description => 'Get chronology of key counts.',
         :parameters => {
-            :key => 'Tag key (required).',
+            :key => 'Tag key (required).'
         },
         :paging => :no,
         :result => no_paging_results([
@@ -455,19 +472,19 @@ class Taginfo < Sinatra::Base
         :example => { :key => 'highway' },
         :ui => '/keys/highway#chronology'
     }) do
-        if not Source.get(:chronology)
-            return generate_json_result(0, []);
+        if not @sources.get(:chronology)
+            return generate_json_result(0, [])
         end
 
         key = params[:key]
 
         res = @db.select('SELECT data FROM chronology.keys_chronology').
             condition('key = ?', key).
-            get_first_value()
+            get_first_value
 
         data = unpack_chronology(res)
 
-        return generate_json_result(data.size(), data);
+        return generate_json_result(data.size, data)
     end
 
     api(4, 'key/overview', {
@@ -512,18 +529,18 @@ class Taginfo < Sinatra::Base
         data = { :key => key, :counts => [] }
 
         # default values
-        ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
+        %w[ all nodes ways relations ].each_with_index do |type, n|
             data[:counts][n] = { :type => type, :count => 0, :count_fraction => 0.0, :values => 0 }
         end
 
-        row = @db.select('SELECT * FROM db.keys').condition('key = ?', key).get_first_row()
+        row = @db.select('SELECT * FROM db.keys').condition('key = ?', key).get_first_row
         if row
-            ['all', 'nodes', 'ways', 'relations'].each_with_index do |type, n|
+            %w[ all nodes ways relations ].each_with_index do |type, n|
                 data[:counts][n] = {
                     :type           => type,
                     :count          => row['count_' + type].to_i,
                     :count_fraction => (row['count_' + type].to_f / get_total(type)).round(4),
-                    :values         => row['values_' + type].to_i,
+                    :values         => row['values_' + type].to_i
                 }
             end
             data[:projects] = row['projects'].to_i
@@ -533,9 +550,9 @@ class Taginfo < Sinatra::Base
         data[:prevalent_values] = @db.select("SELECT value, count, fraction FROM db.prevalent_values").
             condition('key = ?', key).
             order_by([:count], 'DESC').
-            execute().map{ |row| { 'value' => row['value'], 'count' => row['count'].to_i, 'fraction' => row['fraction'].to_f } }
+            execute.map{ |row| { 'value' => row['value'], 'count' => row['count'].to_i, 'fraction' => row['fraction'].to_f } }
 
-        data[:wiki_pages] = @db.select("SELECT DISTINCT lang FROM wiki.wikipages WHERE key=? AND value IS NULL ORDER BY lang", key).execute().map do |row|
+        data[:wiki_pages] = @db.select("SELECT DISTINCT lang FROM wiki.wikipages WHERE key=? AND value IS NULL ORDER BY lang", key).execute.map do |row|
             lang = row['lang']
             {
                 :lang    => lang,
@@ -548,11 +565,11 @@ class Taginfo < Sinatra::Base
         data[:has_map] = data[:counts][0][:count] > 0
 
         data[:description] = {}
-        @db.select("SELECT description, lang FROM wiki.wikipages WHERE key=? AND value IS NULL AND description IS NOT NULL ORDER BY lang", key).execute().each{ |row|
+        @db.select("SELECT description, lang FROM wiki.wikipages WHERE key=? AND value IS NULL AND description IS NOT NULL ORDER BY lang", key).execute.each do |row|
             data[:description][row['lang']] = { :text => row['description'], :dir => direction_from_lang_code(row['lang']) }
-        }
+        end
 
-        return generate_json_result(1, data);
+        return generate_json_result(1, data)
     end
 
 end

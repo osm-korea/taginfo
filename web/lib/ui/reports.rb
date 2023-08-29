@@ -9,11 +9,11 @@ class Taginfo < Sinatra::Base
 
     Report.each do |report|
         get report.url do
+            @title = [report.title, t.taginfo.reports]
             section :reports
-            if File.exists?("viewsjs/reports/#{ report.name }.js.erb")
-                javascript "#{ r18n.locale.code }/reports/#{ report.name }"
+            if File.exist?("public/js/pages/reports/#{ report.name }.js")
+                javascript "pages/reports/#{ report.name }"
             end
-            javascript_for(:flexigrid)
             erb ('reports/' + report.name).to_sym
         end
     end

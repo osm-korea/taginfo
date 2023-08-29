@@ -5,12 +5,12 @@ class Taginfo < Sinatra::Base
     get '/search' do
         @title = t.pages.search.title
 
-        javascript "#{ r18n.locale.code }/search"
         @query = params[:q]
-        javascript_for(:flexigrid)
         if @query =~ /(.*)=(.*)/
+            javascript "pages/search_tags"
             erb :search_tags
         else
+            javascript "pages/search"
             erb :search
         end
     end
@@ -69,7 +69,7 @@ END_XML
         if format == 'simple'
             # simple format is used by the search box on the website itself,
             # it is just a list of suggestions
-            return res.to_json + "\n";
+            return res.to_json + "\n"
         else
             # this is the OpenSearch standard format
             return [

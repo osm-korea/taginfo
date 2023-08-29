@@ -17,7 +17,7 @@ class Taginfo < Sinatra::Base
         :parameters => { :query => 'Only show keys matching this query (substring match, optional).' },
         :paging => :optional,
         :filter => @@filters,
-        :sort => %w( key count_all count_nodes count_ways count_relations values_all users_all in_wiki length ),
+        :sort => %w[ key count_all count_nodes count_ways count_relations values_all users_all in_wiki length ],
         :result => paging_results([
             [:key,                      :STRING, 'Key'],
             [:count_all,                :INT,    'Number of objects in the OSM database with this key.'],
@@ -58,7 +58,7 @@ class Taginfo < Sinatra::Base
         res = @db.select('SELECT * FROM db.keys').
             condition_if("key LIKE ? ESCAPE '@'", like_contains(params[:query])).
             conditions(filters).
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.key
                 o.count_all
                 o.count_nodes
@@ -71,9 +71,9 @@ class Taginfo < Sinatra::Base
                 o.projects :key
                 o.length 'length(key)'
                 o.length :key
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         if include_data[:wikipages]
             reshash = Hash.new
@@ -89,7 +89,7 @@ class Taginfo < Sinatra::Base
             wikipages = @db.select('SELECT key, lang, title, type FROM wiki.wikipages').
                 condition("key IN (#{ key_list.join(',') }) AND value IS NULL").
                 order_by([:key, :lang], 'ASC').
-                execute()
+                execute
 
             wikipages.each do |wp|
                 key = wp['key']
@@ -112,7 +112,7 @@ class Taginfo < Sinatra::Base
             prevvalues = @db.select('SELECT key, value, count, fraction FROM db.prevalent_values').
                 condition("key IN (#{ key_list.join(',') })").
                 order_by([:count], 'DESC').
-                execute()
+                execute
 
             prevvalues.each do |pv|
                 key = pv['key']
@@ -124,24 +124,25 @@ class Taginfo < Sinatra::Base
         end
 
         return generate_json_result(total,
-            res.map{ |row| h = {
-                :key                      => row['key'],
-                :count_all                => row['count_all'].to_i,
-                :count_all_fraction       => (row['count_all'].to_f / @db.stats('objects')).round(4),
-                :count_nodes              => row['count_nodes'].to_i,
-                :count_nodes_fraction     => (row['count_nodes'].to_f / @db.stats('nodes_with_tags')).round(4),
-                :count_ways               => row['count_ways'].to_i,
-                :count_ways_fraction      => (row['count_ways'].to_f / @db.stats('ways')).round(4),
-                :count_relations          => row['count_relations'].to_i,
-                :count_relations_fraction => (row['count_relations'].to_f / @db.stats('relations')).round(4),
-                :values_all               => row['values_all'].to_i,
-                :users_all                => row['users_all'].to_i,
-                :in_wiki                  => row['in_wiki'].to_i != 0,
-                :projects                 => row['projects'].to_i
-            }
-            h[:wikipages] = row['wikipages'] if row['wikipages']
-            h[:prevalent_values] = row['prevalent_values'][0,10] if row['prevalent_values']
-            h }
+            res.map do |row| h = {
+                    :key                      => row['key'],
+                    :count_all                => row['count_all'].to_i,
+                    :count_all_fraction       => (row['count_all'].to_f / @db.stats('objects')).round(4),
+                    :count_nodes              => row['count_nodes'].to_i,
+                    :count_nodes_fraction     => (row['count_nodes'].to_f / @db.stats('nodes_with_tags')).round(4),
+                    :count_ways               => row['count_ways'].to_i,
+                    :count_ways_fraction      => (row['count_ways'].to_f / @db.stats('ways')).round(4),
+                    :count_relations          => row['count_relations'].to_i,
+                    :count_relations_fraction => (row['count_relations'].to_f / @db.stats('relations')).round(4),
+                    :values_all               => row['values_all'].to_i,
+                    :users_all                => row['users_all'].to_i,
+                    :in_wiki                  => row['in_wiki'].to_i != 0,
+                    :projects                 => row['projects'].to_i
+                }
+                h[:wikipages] = row['wikipages'] if row['wikipages']
+                h[:prevalent_values] = row['prevalent_values'][0, 10] if row['prevalent_values']
+                h
+            end
         )
     end
 
@@ -149,7 +150,7 @@ class Taginfo < Sinatra::Base
         :description => 'Get list of wiki pages in different languages for all keys.',
         :parameters => { :query => 'Only show keys matching this query (substring match, optional).' },
         :paging => :optional,
-        :sort => %w( key ),
+        :sort => %w[ key ],
         :result => paging_results([
             [:key, :STRING, 'Key'],
             [:lang, :HASH, 'Hash with language codes as keys and values showing what type of wiki pages are available.']
@@ -163,21 +164,21 @@ class Taginfo < Sinatra::Base
 
         res = @db.select("SELECT key, coalesce(langs, '') AS langs FROM wiki.wikipages_keys").
             condition_if("key LIKE ? ESCAPE '@'", like_contains(params[:query])).
-            order_by(@ap.sortname, @ap.sortorder){ |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.key
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         return generate_json_result(total,
-            res.map{ |row|
+            res.map do |row|
                 lang_hash = Hash.new
-                row['langs'].split(',').each{ |l|
+                row['langs'].split(',').each do |l|
                     (lang, status) = l.split(' ', 2)
                     lang_hash[lang] = status
-                }
+                end
                 { :key => row['key'], :lang => lang_hash }
-            }
+            end
         )
     end
 
@@ -185,7 +186,7 @@ class Taginfo < Sinatra::Base
         :description => 'Get list of pairs of similar keys, one used very often, one used rarely.',
         :parameters => { :query => 'Only show keys matching this query (substring match, optional).' },
         :paging => :optional,
-        :sort => %w( key_common key_rare count_all_common count_all_rare similarity ),
+        :sort => %w[ key_common key_rare count_all_common count_all_rare similarity ],
         :result => paging_results([
             [:key_common,       :STRING, 'Key thats used often in OSM database'],
             [:count_all_common, :INT,    'Number of objects in the OSM database with the common key.'],
@@ -208,7 +209,7 @@ class Taginfo < Sinatra::Base
         res = @db.select("SELECT * FROM similar_keys_common_rare").
             condition(cond).
             condition_if("(key_common LIKE ? ESCAPE '@' OR key_rare LIKE ? ESCAPE '@')", query, query).
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.key_common :key_common
                 o.key_common :key_rare
                 o.key_rare :key_rare
@@ -222,19 +223,19 @@ class Taginfo < Sinatra::Base
                 o.similarity :similarity
                 o.similarity! :count_all_common
                 o.similarity! :count_all_rare
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         return generate_json_result(total,
-            res.map{ |row| {
+            res.map do |row| {
                     :key_common       => row['key_common'],
                     :key_rare         => row['key_rare'],
                     :count_all_common => row['count_all_common'],
                     :count_all_rare   => row['count_all_rare'],
                     :similarity       => row['similarity']
                 }
-            }
+            end
         )
     end
 
@@ -246,7 +247,7 @@ class Taginfo < Sinatra::Base
             :query => 'Only show results where the key matches this query (substring match, optional).'
         },
         :paging => :optional,
-        :sort => %w( key count_all values_all users_all ),
+        :sort => %w[ key count_all values_all users_all ],
         :result => paging_results([
             [:key,                :STRING, 'Key'],
             [:count_all,          :INT,    'Number of objects in database with this key.'],
@@ -280,14 +281,14 @@ class Taginfo < Sinatra::Base
             condition('count_all > ?', min_count).
             condition("in_wiki#{english} = 0").
             condition_if("key LIKE ? ESCAPE '@'", like_contains(params[:query])).
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.key
                 o.count_all
                 o.values_all
                 o.users_all
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         reshash = Hash.new
         res.each do |row|
@@ -298,7 +299,7 @@ class Taginfo < Sinatra::Base
         prevvalues = @db.select('SELECT key, value, count, fraction FROM db.prevalent_values').
             condition("key IN (#{ res.map{ |row| "'" + SQLite3::Database.quote(row['key']) + "'" }.join(',') })").
             order_by([:count], 'DESC').
-            execute()
+            execute
 
         prevvalues.each do |pv|
             key = pv['key']
@@ -309,14 +310,15 @@ class Taginfo < Sinatra::Base
         end
 
         return generate_json_result(total,
-            res.map{ |row| {
+            res.map do |row| {
                 :key                => row['key'],
                 :count_all          => row['count_all'].to_i,
                 :count_all_fraction => row['count_all'].to_f / @db.stats('objects'),
                 :values_all         => row['values_all'].to_i,
                 :users_all          => row['users_all'].to_i,
                 :prevalent_values   => row['prevalent_values']
-            } }
+            }
+            end
         )
     end
 

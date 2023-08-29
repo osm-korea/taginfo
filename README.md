@@ -25,7 +25,7 @@ when you switch to a new version, sometimes things can break.
 
 It uses:
 
-* Ruby (must be at least 2.4)
+* Ruby (must be at least 3.0)
 * [Sinatra web framework](http://www.sinatrarb.com/) and other ruby libraries
 * curl binary
 * sqlite3 binary (version 3.9 or above with FTS5 and regexp support)
@@ -76,9 +76,11 @@ cd web
 
 You can also use it via [uWSGI](https://uwsgi-docs.readthedocs.io/en/latest/),
 
+(On Debian install these packages: `uwsgi uwsgi-core uwsgi-plugin-rack-ruby3.1`.)
+
 ```sh
 cd web
-uwsgi uwsgi.ini
+bundle exec uwsgi uwsgi.ini
 ```
 
 You can change various settings in the [config file](web/uwsgi.ini) and use
@@ -100,17 +102,16 @@ thin restart -C /etc/thin/myapp.site.com
 
 
 
+## Tests
+
+There are a few tests for the Ruby code. Call `rake` in the `web` directory to
+run the tests.
+
+
 ## Javascript
 
 Taginfo uses the following Javascript libraries:
-* jQuery 1.9.0
-* jQuery UI 1.9.2
-* [customSelect](http://adam.co/lab/jquery/customselect/)
-* [tipsy](http://onehackoranother.com/projects/jquery/tipsy/)
-* [jQuery Cookie](https://github.com/carhartl/jquery-cookie/)
-* Flexigrid (from [Google Code](http://code.google.com/p/flexigrid/) and
-  [flexigrid.info](http://www.flexigrid.info/), but with changes and bugfixes)
-* [slicknav](http://slicknav.com/)
+* [d3](https://d3js.org/)
 
 All the Javascript and CSS needed is already included.
 

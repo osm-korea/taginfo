@@ -1,10 +1,15 @@
-<% @css = <<"CSS"
+<%
+@context[:backgroundImage] = @taginfo_config.get('geodistribution.background_image')
+@context[:data] = @data
+
+@css = <<"CSS"
 .comparison {
     display: grid;
-    grid-template-rows: repeat(6, auto);
     grid-auto-flow: column;
+    grid-template-rows: repeat(6, auto);
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 1px 10px;
+    margin-bottom: 20px;
 }
 
 .comparison a.close {
@@ -46,14 +51,28 @@
 
 .comparison > div.map {
     border-radius: 0 0 10px 10px;
+    display: flex;
 }
 
 .comparison > div.map div {
-    background-image: url(#{ @taginfo_config.get('geodistribution.background_image') });
-    background-repeat: no-repeat;
-    background-position: center 2px;
-    background-size: #{ @img_width }px #{ @img_height }px;
     position: relative;
+    margin: auto;
+}
+
+.comparison > div.map img.map-fg {
+    position: relative;
+    display: block;
+    width: auto;
+    height: auto;
+}
+
+.comparison > div.map img.map-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% - 2px);
+    height: calc(100% - 2px);
+    z-index: 1;
 }
 
 html[dir="rtl"] .comparison a.close {
@@ -92,25 +111,27 @@ html[dir="rtl"] table.compstat th {
     text-align: right;
 }
 
+#tools {
+    position: absolute;
+    right: 20px;
+    margin-top: -4px !important;
+}
+
 CSS
 %>
-<div class="pre">
-    <h1 class="section"><%= h(t.taginfo.comparison) %></h1>
-</div>
+<h1 class="section"><%= h(t.taginfo.comparison) %></h1>
 <% if @data.size == 0 %>
 <p class="empty"><%= h(t.pages.compare.nothing_to_compare) %></p>
 <% else %>
+<div id="tools" class="no-print"><ul>
+    <li class="button"><a target="_blank" id="osm-tag-history-button">OSM Tag History</a></li>
+</ul></div>
 <div class="comparison">
 <% @data.each_with_index do |data, num| %>
-    <% key_or_tag = data[:value].nil? ? 'key' : 'tag' %>
     <div class="title item<%= num %>">
-        <a class="close" href="#"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMCAxMCc+PHBhdGggc3R5bGU9J3N0cm9rZTogIzgwODA4MDsgc3Ryb2tlLXdpZHRoOiAycHg7JyBkPSdNMiAyIEw4IDggTTggMiBMMiA4Jy8+PC9zdmc+Cg==" data-src="/img/close.svg"/></a>
-        <h2 data-key="<%= h(data[:key]) %>"
-<% if data[:value] %>
-    data-value="<%= h(data[:value]) %>"
-<% end %>
-        ></h2>
-        <div lang="<%= data[:lang] %>" dir="<%= data[:dir] %>"><%= data[:desc] %></div>
+        <a class="close" href="#"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMCAxMCcgc3Ryb2tlPScjODA4MDgwJyBzdHJva2Utd2lkdGg9JzEuNScgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJyBzdHJva2UtbGluZWpvaW49J3JvdW5kJz48cGF0aCBkPSdNMiAyIEw4IDggTTggMiBMMiA4Jy8+PC9zdmc+Cg" data-src="/img/close.svg"/></a>
+        <h2></h2>
+        <div class="description item<%= num %>"></div>
     </div>
     <div class="counts item<%= num %>">
         <table class="compstat">
@@ -125,20 +146,11 @@ CSS
         <div class="data"></div>
     </div>
     <div class="wiki item<%= num %>">
-        <div><b><%= h(t.pages[key_or_tag].wiki_pages.title) %>:</b></div>
+        <div><b></b></div>
         <div class="data"></div>
     </div>
-    <div class="projects item<%= num %>">
-        <div><b><%= h(t.pages[key_or_tag].projects.title) %>:</b> </div>
-    </div>
-    <div class="map item<%= num %>">
-<% if data[:has_map] %>
-        <div>
-            <img class="map" src="/api/4/<%= key_or_tag %>/distribution/nodes?key=<%= data[:key] %><%= data[:value].nil? ? '' : ('&amp;value=' + data[:value]) %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>" style="position: absolute;"/>
-            <img class="map" src="/api/4/<%= key_or_tag %>/distribution/ways?key=<%= data[:key] %><%= data[:value].nil? ? '' : ('&amp;value=' + data[:value]) %>" alt="" width="<%= @img_width %>" height="<%= @img_height %>"/>
-            <div class="note"><%= @taginfo_config.get('geodistribution.image_attribution') %></div>
-        </div>
+    <div class="projects item<%= num %>"><b></b> <a class="data"></a></div>
+    <div class="map item<%= num %>"><div></div></div>
 <% end %>
-    </div>
-<% end %>
+</div>
 <% end %>

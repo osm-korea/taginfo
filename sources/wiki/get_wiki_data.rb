@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
-# coding: utf-8
 #------------------------------------------------------------------------------
 #
 #  get_wiki_data.rb [DIR]
@@ -19,7 +18,7 @@
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2013-2022  Jochen Topf <jochen@topf.org>
+#  Copyright (C) 2013-2023  Jochen Topf <jochen@topf.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -41,33 +40,34 @@ require 'net/http'
 require 'uri'
 require 'sqlite3'
 
-require 'mediawikiapi.rb'
+require 'mediawikiapi'
 
 #------------------------------------------------------------------------------
 
 # Descriptions of keys and tags should only contain plain text, not HTML,
 # wiki templates, links or other wiki syntax.
-PROBLEMATIC_DESCRIPTION = %r{[<>{}\[\]]}
+PROBLEMATIC_DESCRIPTION = %r{[<>{}\[\]]}.freeze
 
 # The format of a wikidata item.
-WIKIDATA_FORMAT = %r{^Q[0-9]+}
+WIKIDATA_FORMAT = %r{^Q[0-9]+}.freeze
 
 # The format of a mediawiki page title.
-PAGE_TITLE_FORMAT = %r{^([-_:.,= ()]|[[:alnum:]])+$}
+PAGE_TITLE_FORMAT = %r{^([-_:.,= ()]|[[:alnum:]])+$}.freeze
 
 # Format of image titles
-IMAGE_TITLE_FORMAT = %r{^(file|image):(.*)$}i
+IMAGE_TITLE_FORMAT = %r{^(file|image):(.*)$}i.freeze
 
-# Language code format (something link 'en', or 'en_GB')
-LANGUAGE_CODE = %r{^[a-z]{2}(-[a-z0-9]+)?$}i
+# Language code format (something link 'en', or 'en-GB')
+LANGUAGE_CODE = %r{^[a-z]{2,3}(-[a-z0-9]+)?$}i.freeze
 
-CONTAINS_SLASH = %r{/}
+CONTAINS_SLASH = %r{/}.freeze
 
-HTML_COMMENT = %r{<!--.*?-->}
+HTML_COMMENT = %r{<!--.*?-->}.freeze
 
 # All the template names this script knows about
-KNOWN_TEMPLATES = %r{^(?:template:)?(?:[a-z][a-z](?:-[a-z]+)?:)?(rtl|ar|relatedterm|relatedtermlist|wikipedia|key|tag|icon(node|way|area|relation)|wikiicon|(key|value|relation)description)$}i
+KNOWN_TEMPLATES = %r{^(?:template:)?(?:[a-z][a-z](?:-[a-z]+)?:)?(rtl|ar|relatedterm|relatedtermlist|wikipedia|key|tag|icon(node|way|area|relation)|wikiicon|(key|value|relation)description)$}i.freeze
 
+# Represents a page in the OSM wiki
 class WikiPage
 
     @@pages = {}
@@ -79,11 +79,11 @@ class WikiPage
                 :tag, :key, :value, :lang, :ttype,
                 :tags_implies, :tags_combination, :tags_linked,
                 :parsed, :has_templ, :group,
-                :onNode, :onWay, :onArea, :onRelation,
+                :on_node, :on_way, :on_area, :on_relation,
                 :approval_status, :statuslink, :wikidata
 
     def self.pages
-        @@pages.values.sort{ |a,b| a.title <=> b.title }
+        @@pages.values.sort{ |a, b| a.title <=> b.title }
     end
 
     def self.find(name)
@@ -96,9 +96,11 @@ class WikiPage
         @namespace = namespace  # 'XX' (mediawiki namespace or '')
         @title     = title      # wiki page title
 
-        @has_templ  = false
+        @has_templ = false
         @parsed = nil
 
+        @tags_implies = []
+        @tags_combination = []
         @tags_linked = []
         @group = ''
 
@@ -106,18 +108,14 @@ class WikiPage
     end
 
     def parse_title(title)
-        tag       = title.gsub(/^([^:]+:)?(Key|Tag):/, '') # complete tag (key=value)
-        key       = tag.sub(/=.*/, '')                     # key
-        if tag =~ /=/
-            value = tag.sub(/.*?=/, '')                    # value (if any)
-        else
-            value = nil
-        end
+        tag = title.gsub(/^([^:]+:)?(Key|Tag):/, '') # complete tag (key=value)
+        key = tag.sub(/=.*/, '')                     # key
+        value = tag.sub(/.*?=/, '') if tag =~ /=/    # value (if any)
         if title =~ /^(.*):(Key|Tag):/
-            lang  = $1.downcase                            # IETF language tag
-            ttype = $2.downcase                            # 'tag' or 'key'
+            lang  = Regexp.last_match(1).downcase          # IETF language tag
+            ttype = Regexp.last_match(2).downcase          # 'tag' or 'key'
         else
-            lang  = 'en'
+            lang = 'en'
         end
 
         [lang, tag, key, value, ttype]
@@ -127,11 +125,12 @@ class WikiPage
     def check_title
         return :wrong_lang_format     unless LANGUAGE_CODE.match(@lang)
         return :lang_is_en            if @title =~ /^en:/i
-        return :value_in_key_page     if defined?(@ttype) && @ttype == 'key' && ! @value.nil?
-        return :no_value_for_tag_page if defined?(@ttype) && @ttype == 'tag' &&   @value.nil?
+        return :value_in_key_page     if defined?(@ttype) && @ttype == 'key' && !@value.nil?
+        return :no_value_for_tag_page if defined?(@ttype) && @ttype == 'tag' && @value.nil?
         return :slash_in_key          if defined?(@key) && CONTAINS_SLASH.match(@key)
         return :slash_in_value        if defined?(@value) && CONTAINS_SLASH.match(@value)
-        return :ok
+
+        :ok
     end
 
     # Return parameters for API call to read this page.
@@ -153,7 +152,7 @@ class WikiPage
             puts "  Redirect to '#{m[1]}'"
             @redirect_target = m[1]
             if title =~ /(^|:)(Key|Tag):/
-                (to_lang, to_tag, to_key, to_value, to_ttype) = parse_title(@redirect_target)
+                (to_lang, _, to_key, to_value,) = parse_title(@redirect_target)
             end
             db.execute("INSERT INTO redirects (from_title, from_lang, from_key, from_value, to_title, to_lang, to_key, to_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [title, lang, key, value, @redirect_target, to_lang, to_key, to_value])
         end
@@ -170,44 +169,49 @@ class WikiPage
 
         loop do
             # split text into ('before', 'token', 'after')
-            if context.last.has_parname
-                m = /^(.*?)(\{\{|\}\}|[|])(.*)$/m.match(text)
-            else
-                m = /^(.*?)(\{\{|\}\}|[|=])(.*)$/m.match(text)
-            end
+            m = if context.last.parname?
+                    /^(.*?)(\{\{|\}\}|[|])(.*)$/m.match(text)
+                else
+                    /^(.*?)(\{\{|\}\}|[|=])(.*)$/m.match(text)
+                end
 
             # we are done if there are no more tokens
             if m.nil?
                 return
             end
 
-            # do the right thing depending on next token
-            case m[2]
-                when '{{' # start of template
-                    context.last.add_parameter(m[1].strip)
-                    context << Template.new
-                when '}}' # end of template
-                    context.last.add_parameter(m[1].strip)
-                    c = context.pop
-                    if context.size == 0
-                        raise "Template {{}} not balanced"
-                    end
-                    parse_template(c, context.size, db)
-                    context.last.add_parameter(c)
-                when '|' # template parameter
-                    context.last.add_parameter(m[1].strip)
-                    context.last.parname(nil)
-                when '=' # named template parameter
-                    parameter_name = (m[1].strip == ':') ? 'subkey' : m[1].strip
-                    context.last.parname(parameter_name)
-            end
-
             # 'after' is our next 'text'
             text = m[3]
+
+            # do the right thing depending on next token
+            case m[2]
+            when '{{' # start of template
+                if %r(^!}}).match(m[3])
+                    text[0..2] = '|'
+                elsif %r(^=}}).match(m[3])
+                    text[0..2] = '='
+                else
+                    context.last.add_parameter(m[1].strip)
+                    context << Template.new
+                end
+            when '}}' # end of template
+                context.last.add_parameter(m[1].strip)
+                c = context.pop
+                raise "Template {{}} not balanced" if context.empty?
+
+                parse_template(c, context.size, db)
+                context.last.add_parameter(c)
+            when '|' # template parameter
+                context.last.add_parameter(m[1].strip)
+                context.last.parname = nil
+            when '=' # named template parameter
+                parameter_name = m[1].strip == ':' ? 'subkey' : m[1].strip
+                context.last.parname = parameter_name
+            end
         end
-    rescue => ex
-        puts "FATAL: Parsing of page '#{title}' failed '#{ex.message}':"
-        puts ex.backtrace.join("\n")
+    rescue StandardError => e
+        puts "FATAL: Parsing of page '#{title}' failed '#{e.message}':"
+        puts e.backtrace.join("\n")
         @parsed = false
         db.execute("INSERT INTO problems (location, reason, title, lang, key, value) VALUES ('page content', 'parsing failed', ?, ?, ?, ?)", [title, lang, key, value])
     end
@@ -218,8 +222,8 @@ class WikiPage
             puts "ERROR: invalid image: page='#{title}' image=nil"
             db.execute("INSERT INTO problems (location, reason, title, lang, key, value) VALUES ('Template:Key/Value/RelationDescription', 'image parameter empty', ?, ?, ?, ?)", [title, lang, key, value])
         elsif IMAGE_TITLE_FORMAT.match(ititle)
-            @image = "File:#{$2}"
-            if ! PAGE_TITLE_FORMAT.match(ititle)
+            @image = "File:#{Regexp.last_match(2)}"
+            if !PAGE_TITLE_FORMAT.match(ititle)
                 puts "WARN: possible invalid character in image title: page='#{title}' image='#{ititle}'"
             end
         else
@@ -231,16 +235,16 @@ class WikiPage
     def set_osmcarto_rendering(ititle, db)
         @osmcarto_rendering = ''
         if ititle.nil?
-            puts "ERROR: invalid osmcarto-rendering: page='#{title}' image=nil"
+            puts "ERROR: empty osmcarto-rendering: page='#{title}' image=nil"
             db.execute("INSERT INTO problems (location, reason, title, lang, key, value) VALUES ('Template:Key/Value/RelationDescription', 'osmcarto-rendering parameter empty', ?, ?, ?, ?)", [title, lang, key, value])
         elsif IMAGE_TITLE_FORMAT.match(ititle)
-            @osmcarto_rendering = "File:#{$2}"
-            if ! PAGE_TITLE_FORMAT.match(ititle)
+            @osmcarto_rendering = "File:#{Regexp.last_match(2)}"
+            if !PAGE_TITLE_FORMAT.match(ititle)
                 puts "WARN: possible invalid character in osmcarto-rendering image title: page='#{title}' image='#{ititle}'"
             end
         else
-            puts "ERROR: invalid osmcarto-rendering: page='#{title}' image='#{ititle}'"
-            db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'invalid osmcarto-rendering parameter', ?, ?, ?, ?, ?)", [title, lang, key, value, ititle])
+            puts "ERROR: non-file osmcarto-rendering: page='#{title}' image='#{ititle}'"
+            db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'non-file osmcarto-rendering parameter', ?, ?, ?, ?, ?)", [title, lang, key, value, ititle])
         end
     end
 
@@ -254,39 +258,32 @@ class WikiPage
             param = param[0]
         end
         if param
-            if param == 'yes'
-                return true
-            elsif param == 'no'
-                return false
-            else
-                puts "ERROR: invalid value for parameter: param_name=#{param_name} title=#{title} lang=#{lang} key=#{key} value=#{value} param=#{param}"
-                db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'invalid value for ' || ? || ' parameter', ?, ?, ?, ?, ?)", [param_name, title, lang, key, value, param])
-            end
+            return true if param == 'yes'
+            return false if param == 'no'
+
+            puts "ERROR: invalid value for parameter: param_name=#{param_name} title=#{title} lang=#{lang} key=#{key} value=#{value} param=#{param}"
+            db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'invalid value for ' || ? || ' parameter', ?, ?, ?, ?, ?)", [param_name, title, lang, key, value, param])
         end
-        return false
+        false
     end
 
-    def parse_template_key_tag(template, level, db)
+    def parse_template_key_tag(template)
         tag = template.parameters[0]
-        if tag
-            if template.parameters[1]
-                tag += '=' + template.parameters[1]
-            end
-            add_tag_link(tag)
+        return unless tag
+
+        if template.parameters[1]
+            tag += '=' + template.parameters[1]
         end
+        add_tag_link(tag)
     end
 
     def parse_template_related_term(template, level, db)
-        if template.parameters.size > 1
-            lang = template.parameters.shift
-        else
-            lang = 'en'
-        end
+        lang = template.parameters.size > 1 ? template.parameters.shift : 'en'
         term = template.parameters.shift
-        if template.parameters.size != 0
+        if !template.parameters.empty?
             puts "ERROR: More than two parameters on RelatedTerm template"
         end
-        puts "#{ "  " * level }Related term: lang='#{lang}' term='#{term}'"
+        puts "#{ '  ' * level }Related term: lang='#{lang}' term='#{term}'"
         if LANGUAGE_CODE.match(lang)
             if defined?(@key)
                 db.execute("INSERT INTO tag_page_related_terms (key, value, lang, term) VALUES (?, ?, ?, ?)", [@key, @value, lang, term])
@@ -305,7 +302,7 @@ class WikiPage
         if lang == ''
             lang = 'en'
         end
-        puts "#{ "  " * level }Wikipedia link: lang='#{lang}' title='#{title}'"
+        puts "#{ '  ' * level }Wikipedia link: lang='#{lang}' title='#{title}'"
         if lang == 'commons' || LANGUAGE_CODE.match(lang)
             if defined?(@key)
                 db.execute("INSERT INTO tag_page_wikipedia_links (key, value, lang, title) VALUES (?, ?, ?, ?)", [@key, @value, lang, title])
@@ -318,7 +315,7 @@ class WikiPage
         end
     end
 
-    def parse_template_description(template, level, db)
+    def parse_template_description(template, db)
         @has_templ = true
 
         if template.parameters != []
@@ -329,12 +326,12 @@ class WikiPage
         if template.named_parameters['description']
             desc = []
             template.named_parameters['description'].each do |i|
-                if i.class == Template
+                if i.instance_of?(Template)
                     desc << ' ' << i.parameters.join('=') << ' '
                 else
                     desc << i
                 end
-                @description = desc.join('').strip
+                @description = desc.join.strip
                 if PROBLEMATIC_DESCRIPTION.match(@description)
                     puts "ERROR: problematic description: #{ @description }"
                     db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'description parameter should only contain plain text', ?, ?, ?, ?, ?)", [title, lang, key, value, description])
@@ -360,41 +357,41 @@ class WikiPage
             end
         end
 
-        @onNode     = parse_type('onNode',     template.named_parameters['onNode'],     db)
-        @onWay      = parse_type('onWay',      template.named_parameters['onWay'],      db)
-        @onArea     = parse_type('onArea',     template.named_parameters['onArea'],     db)
-        @onRelation = parse_type('onRelation', template.named_parameters['onRelation'], db)
+        @on_node     = parse_type('onNode',     template.named_parameters['onNode'],     db)
+        @on_way      = parse_type('onWay',      template.named_parameters['onWay'],      db)
+        @on_area     = parse_type('onArea',     template.named_parameters['onArea'],     db)
+        @on_relation = parse_type('onRelation', template.named_parameters['onRelation'], db)
 
-        if template.named_parameters['implies']
-            template.named_parameters['implies'].each do |i|
-                if i.class == Template
-                    tags_implies << i.parameters.join('=')
-                end
+        template.named_parameters['implies']&.each do |i|
+            if i.instance_of?(Template)
+                @tags_implies << i.parameters.join('=')
             end
         end
-        if template.named_parameters['combination']
-            template.named_parameters['combination'].each do |i|
-                if i.class == Template
-                    tags_combination << i.parameters.join('=')
-                end
+
+        template.named_parameters['combination']&.each do |i|
+            if i.instance_of?(Template)
+                @tags_combination << i.parameters.join('=')
             end
         end
+
         if template.named_parameters['status']
             @approval_status = template.named_parameters['status'].join(',')
         end
+
         if template.named_parameters['statuslink']
             @statuslink = template.named_parameters['statuslink'][0]
-            if @statuslink.class == Template
+            if @statuslink.instance_of?(Template)
                 @statuslink = nil
             end
         end
-        if template.named_parameters['wikidata']
-            wikidata = template.named_parameters['wikidata'][0]
-            if WIKIDATA_FORMAT.match(wikidata)
-                @wikidata = wikidata
-            else
-                db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'wikidata parameter does not match Q###', ?, ?, ?, ?, ?)", [title, lang, key, value, wikidata])
-            end
+
+        return unless template.named_parameters['wikidata']
+
+        wikidata = template.named_parameters['wikidata'][0]
+        if WIKIDATA_FORMAT.match(wikidata)
+            @wikidata = wikidata
+        else
+            db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'wikidata parameter does not match Q###', ?, ?, ?, ?, ?)", [title, lang, key, value, wikidata])
         end
     end
 
@@ -404,23 +401,29 @@ class WikiPage
         template.named_parameters.each do |k, v|
             puts "#{spaces}  #{k}: #{v}"
         end
+
         if template.name == 'key' || template.name == 'tag'
-            parse_template_key_tag(template, level, db)
+            parse_template_key_tag(template)
         end
+
         if template.name == 'relatedterm'
             parse_template_related_term(template, level, db)
         end
+
         if template.name == 'wikipedia'
             parse_template_wikipedia(template, level, db)
         end
-        if template.name =~ /(key|value|relation)description$/
-            parse_template_description(template, level, db)
-        end
+
+        return unless template.name =~ /(key|value|relation)description$/
+
+        parse_template_description(template, db)
     end
+
 end
 
 #------------------------------------------------------------------------------
 
+# Represents a "Key:" or "Tag:" page in the OSM wiki
 class KeyOrTagPage < WikiPage
 
     def initialize(type, timestamp, namespace, title)
@@ -428,54 +431,57 @@ class KeyOrTagPage < WikiPage
 
         (@lang, @tag, @key, @value, @ttype) = parse_title(title)
 
-        @tags_implies     = []
-        @tags_combination = []
-        @onNode     = false
-        @onWay      = false
-        @onArea     = false
-        @onRelation = false
+        @on_node = false
+        @on_way = false
+        @on_area = false
+        @on_relation = false
     end
 
     def insert(db)
         db.execute(
-            "INSERT INTO wikipages (lang, tag, key, value, title, body, tgroup, type, has_templ, parsed, redirect_target, description, image, osmcarto_rendering, on_node, on_way, on_area, on_relation, tags_implies, tags_combination, tags_linked, approval_status, statuslink, wikidata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-            lang,
-            tag,
-            key,
-            value,
-            title,
-            content,
-            group,
-            type,
-            has_templ  ? 1 : 0,
-            parsed     ? 1 : 0,
-            redirect_target,
-            description,
-            image,
-            osmcarto_rendering,
-            onNode     ? 1 : 0,
-            onWay      ? 1 : 0,
-            onArea     ? 1 : 0,
-            onRelation ? 1 : 0,
-            tags_implies.    sort.uniq.join(','),
-            tags_combination.sort.uniq.join(','),
-            tags_linked.     sort.uniq.join(','),
-            approval_status,
-            statuslink,
-            wikidata
-        ])
+            "INSERT INTO wikipages (lang, tag, key, value, title, body, tgroup, type, has_templ, parsed, redirect_target, description, image, osmcarto_rendering, on_node, on_way, on_area, on_relation, tags_implies, tags_combination, tags_linked, approval_status, statuslink, wikidata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                lang,
+                tag,
+                key,
+                value,
+                title,
+                content,
+                group,
+                type,
+                has_templ  ? 1 : 0,
+                parsed     ? 1 : 0,
+                redirect_target,
+                description,
+                image,
+                osmcarto_rendering,
+                on_node     ? 1 : 0,
+                on_way      ? 1 : 0,
+                on_area     ? 1 : 0,
+                on_relation ? 1 : 0,
+                tags_implies.sort.uniq.join(','),
+                tags_combination.sort.uniq.join(','),
+                tags_linked.sort.uniq.join(','),
+                approval_status,
+                statuslink,
+                wikidata
+            ]
+        )
     end
 
 end
 
 #------------------------------------------------------------------------------
 
+# Represents a "Key:" page in the OSM wiki
 class KeyPage < KeyOrTagPage
 end
 
+# Represents a "Tag:" page in the OSM wiki
 class TagPage < KeyOrTagPage
 end
 
+# Represents a "Relation:" page in the OSM wiki
 class RelationPage < WikiPage
 
     attr_reader :rtype
@@ -484,73 +490,71 @@ class RelationPage < WikiPage
         super(type, timestamp, namespace, title)
 
         @rtype = title.gsub(/^([^:]+:)?Relation:/, '') # relation type
-        if title =~ /^(.*):Relation:/
-            @lang  = $1.downcase # IETF language tag
-        else
-            @lang  = 'en'
-        end
+
+        m = /^(.*):Relation:/.match(title)
+        @lang = m ? m[1].downcase : 'en' # IETF language tag
     end
 
     def insert(db)
         db.execute(
-            "INSERT INTO relation_pages (lang, rtype, title, body, tgroup, type, has_templ, parsed, redirect_target, description, image, osmcarto_rendering, tags_linked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-            lang,
-            rtype,
-            title,
-            content,
-            group,
-            type,
-            has_templ  ? 1 : 0,
-            parsed     ? 1 : 0,
-            redirect_target,
-            description,
-            image,
-            osmcarto_rendering,
-            tags_linked.sort.uniq.join(',')
-        ])
+            "INSERT INTO relation_pages (lang, rtype, title, body, tgroup, type, has_templ, parsed, redirect_target, description, image, osmcarto_rendering, tags_linked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                lang,
+                rtype,
+                title,
+                content,
+                group,
+                type,
+                has_templ  ? 1 : 0,
+                parsed     ? 1 : 0,
+                redirect_target,
+                description,
+                image,
+                osmcarto_rendering,
+                tags_linked.sort.uniq.join(',')
+            ]
+        )
     end
 
 end
 
 #------------------------------------------------------------------------------
 
+# A template used on wiki pages
 class Template
 
     attr_reader :name, :parameters, :named_parameters
+    attr_writer :parname
 
-    def initialize(name=nil)
+    def initialize(name = nil)
         @name             = name
         @parname          = nil
         @parameters       = []
         @named_parameters = {}
     end
 
-    def parname(name)
-        @parname = name
-    end
-
-    def has_parname
+    def parname?
         !@parname.nil?
     end
 
     def add_parameter(value)
-        if value != ''
-            if @parname.nil? # positional parameter
-                # first parameter is really the name of this template
-                if @name.nil?
-                    if value.is_a?(String) && m = KNOWN_TEMPLATES.match(value)
-                        @name = m[1].downcase
-                    else
-                        puts "WARN: Unknown template: #{ value }"
-                        @name = value.to_s
-                    end
+        return if value == ''
+
+        if @parname.nil? # positional parameter
+            # first parameter is really the name of this template
+            if @name.nil?
+                if value.is_a?(String) && (m = KNOWN_TEMPLATES.match(value))
+                    @name = m[1].downcase
                 else
-                    @parameters << value
+                    puts "WARN: Unknown template: #{ value }"
+                    @name = value.to_s
                 end
-            else # named parameter
-                @named_parameters[@parname] ||= []
-                @named_parameters[@parname] << value
+            else
+                @parameters << value
             end
+        else # named parameter
+            @named_parameters[@parname] ||= []
+            @named_parameters[@parname] << value
         end
     end
 
@@ -558,6 +562,7 @@ end
 
 #------------------------------------------------------------------------------
 
+# A cache for wiki pages stored on disk
 class Cache
 
     @@time_spent_in_api_calls = 0
@@ -573,12 +578,15 @@ class Cache
 
     def get_page(page)
         @current_pagetitles[page.title] = page.timestamp
-        @db.execute("SELECT * FROM cache.cache_pages WHERE title=? AND timestamp=?", [page.title, page.timestamp]) do |row|
-            page.content = row['body']
+        results = @db.execute("SELECT * FROM cache.cache_pages WHERE title=? AND timestamp=?", [page.title, page.timestamp])
+
+        unless results.empty?
+            page.content = results[0]['body']
             puts "CACHE: Page '#{ page.title }' in cache (#{ page.timestamp })"
             @in_cache += 1
             return
         end
+
         @db.execute("DELETE FROM cache.cache_pages WHERE title=?", [page.title])
 
         starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -626,17 +634,17 @@ api = MediaWikiAPI::API.new('/w/index.php?')
 cache = Cache.new(dir, database, api)
 
 database.transaction do |db|
-
     File.open(dir + '/interesting_wiki_pages.list') do |wikipages|
         wikipages.each do |line|
             line.chomp!
             (type, timestamp, namespace, title) = line.split("\t")
 
-            if title =~ /(^|:)Key:/
+            case title
+            when /(^|:)Key:/
                 page = KeyPage.new(type, timestamp, namespace, title)
-            elsif title =~ /(^|:)Tag:/
+            when /(^|:)Tag:/
                 page = TagPage.new(type, timestamp, namespace, title)
-            elsif title =~ /(^|:)Relation:/
+            when /(^|:)Relation:/
                 page = RelationPage.new(type, timestamp, namespace, title)
             else
                 puts "ERROR: Wiki page has wrong format: '#{title}'"
@@ -664,8 +672,6 @@ database.transaction do |db|
 
     cache.cleanup
     cache.print_stats
-
 end
-
 
 #-- THE END -------------------------------------------------------------------

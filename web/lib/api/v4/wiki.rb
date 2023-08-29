@@ -14,22 +14,22 @@ class Taginfo < Sinatra::Base
             [:wiki_tag_pages         , :INT,    'Number of "Tag" wiki pages in this language.'],
             [:wiki_tag_pages_fraction, :FLOAT,  'Number of "Tag" wiki pages in this language in relation to the number of tags described in any language in the wiki.']
         ]),
-        :sort => %w( code native_name english_name wiki_key_pages wiki_tag_pages ),
+        :sort => %w[ code native_name english_name wiki_key_pages wiki_tag_pages ],
         :example => { :sortname => 'wiki_key_pages', :sortorder => 'desc' },
         :ui => '/reports/languages'
     }) do
         res = @db.select('SELECT * FROM languages').
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.code
                 o.native_name
                 o.english_name
                 o.wiki_key_pages
                 o.wiki_tag_pages
-            }.
-            execute()
+            end.
+            execute
 
         return generate_json_result(res.size,
-            res.map{ |row| {
+            res.map do |row| {
                 :code                    => row['code'],
                 :dir                     => direction_from_lang_code(row['code']),
                 :native_name             => row['native_name'],
@@ -37,15 +37,16 @@ class Taginfo < Sinatra::Base
                 :wiki_key_pages          => row['wiki_key_pages'].to_i,
                 :wiki_key_pages_fraction => row['wiki_key_pages'].to_f / @db.stats('wiki_keys_described'),
                 :wiki_tag_pages          => row['wiki_tag_pages'].to_i,
-                :wiki_tag_pages_fraction => row['wiki_tag_pages'].to_f / @db.stats('wiki_tags_described'),
-            } }
+                :wiki_tag_pages_fraction => row['wiki_tag_pages'].to_f / @db.stats('wiki_tags_described')
+            }
+            end
         )
     end
 
     api(0, 'wiki/problems', {
         :description => 'Show problems encountered by taginfo while parsing wiki pages',
         :paging => :optional,
-        :sort => %w( location reason title lang tag ),
+        :sort => %w[ location reason title lang tag ],
         :result => paging_results([
             [:location, :STRING, 'Problem location'],
             [:reason,   :STRING, 'Problem reason'],
@@ -55,7 +56,7 @@ class Taginfo < Sinatra::Base
             [:value,    :STRING, 'Value this wiki page is for (or null if not a "Tag" page)'],
             [:info,     :STRING, 'Informational string dependant on type of problem']
         ]),
-        :example => { },
+        :example => {},
         :ui => '/taginfo/wiki-problems#list'
     }) do
         total = @db.count('wiki.problems').
@@ -64,7 +65,7 @@ class Taginfo < Sinatra::Base
 
         res = @db.select('SELECT * FROM wiki.problems').
             condition_if("location || ' ' || reason || ' ' || title || ' ' LIKE ? ESCAPE '@'", like_contains(params[:query])).
-            order_by(@ap.sortname, @ap.sortorder) { |o|
+            order_by(@ap.sortname, @ap.sortorder) do |o|
                 o.location :location
                 o.location :reason
                 o.location :key
@@ -79,12 +80,12 @@ class Taginfo < Sinatra::Base
                 o.lang :lang
                 o.lang :key
                 o.lang :value
-            }.
+            end.
             paging(@ap).
-            execute()
+            execute
 
         return generate_json_result(total,
-            res.map{ |row| {
+            res.map do |row| {
                 :location => row['location'],
                 :reason   => row['reason'],
                 :title    => row['title'],
@@ -92,7 +93,8 @@ class Taginfo < Sinatra::Base
                 :key      => row['key'],
                 :value    => row['value'],
                 :info     => row['info']
-            } }
+            }
+            end
         )
     end
 
