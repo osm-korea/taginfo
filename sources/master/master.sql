@@ -6,10 +6,12 @@
 --
 -- ============================================================================
 
-ATTACH DATABASE '__DIR__/db/taginfo-db.db'                 AS db;
-ATTACH DATABASE '__DIR__/wiki/taginfo-wiki.db'             AS wiki;
-ATTACH DATABASE '__DIR__/languages/taginfo-languages.db'   AS languages;
-ATTACH DATABASE '__DIR__/projects/taginfo-projects.db'     AS projects;
+-- ============================================================================
+
+ATTACH DATABASE '__DIR__/db/taginfo-db.db'                            AS db;
+ATTACH DATABASE 'file:__DIR__/wiki/taginfo-wiki.db?mode=ro'           AS wiki;
+ATTACH DATABASE 'file:__DIR__/languages/taginfo-languages.db?mode=ro' AS languages;
+ATTACH DATABASE 'file:__DIR__/projects/taginfo-projects.db?mode=ro'   AS projects;
 
 -- ============================================================================
 
@@ -49,6 +51,49 @@ ANALYZE master_stats;
 
 -- ============================================================================
 
+DROP TABLE IF EXISTS project_unique_keys;
+
+CREATE TABLE project_unique_keys (
+    key       VARCHAR NOT NULL,
+    projects  INTEGER DEFAULT 0,
+    in_wiki   INTEGER DEFAULT 0,
+    count_all INTEGER DEFAULT 0
+);
+
+DROP TABLE IF EXISTS project_unique_tags;
+
+CREATE TABLE project_unique_tags (
+    key       VARCHAR NOT NULL,
+    value     VARCHAR NOT NULL,
+    projects  INTEGER DEFAULT 0,
+    in_wiki   INTEGER DEFAULT 0,
+    count_all INTEGER DEFAULT 0
+);
+
+INSERT INTO project_unique_keys (key, projects)
+    SELECT key, count(*) FROM (SELECT DISTINCT key, project_id FROM projects.project_tags) GROUP BY key;
+
+INSERT INTO stats (key, value) SELECT 'project_unique_keys', count(*) FROM project_unique_keys;
+
+INSERT INTO project_unique_tags (key, value, projects)
+    SELECT key, value, count(*) FROM (SELECT DISTINCT key, value, project_id FROM projects.project_tags WHERE value IS NOT NULL) GROUP BY key, value;
+
+INSERT INTO stats (key, value) SELECT 'project_unique_tags', count(*) FROM project_unique_tags;
+
+UPDATE project_unique_keys SET in_wiki = lang_count FROM wiki.wikipages_keys w WHERE project_unique_keys.key = w.key;
+UPDATE project_unique_tags SET in_wiki = lang_count FROM wiki.wikipages_tags w WHERE project_unique_tags.key = w.key AND project_unique_tags.value = w.value;
+
+UPDATE project_unique_keys SET count_all = d.count_all FROM db.keys d WHERE project_unique_keys.key = d.key;
+UPDATE project_unique_tags SET count_all = d.count_all FROM db.tags d WHERE project_unique_tags.key = d.key AND project_unique_tags.value = d.value;
+
+ANALYZE project_unique_keys;
+ANALYZE project_unique_tags;
+
+CREATE INDEX project_unique_keys_key_idx       ON project_unique_keys (key);
+CREATE INDEX project_unique_tags_key_value_idx ON project_unique_tags (key, value);
+
+-- ============================================================================
+
 INSERT INTO db.keys (key) SELECT DISTINCT key FROM wiki.wikipages WHERE key NOT IN (SELECT key FROM db.keys);
 
 UPDATE db.keys SET in_wiki=1    WHERE key IN (SELECT DISTINCT key FROM wiki.wikipages WHERE value IS NULL);
@@ -56,31 +101,9 @@ UPDATE db.keys SET in_wiki_en=1 WHERE key IN (SELECT DISTINCT key FROM wiki.wiki
 
 -- ============================================================================
 
-UPDATE db.keys SET projects=(SELECT projects FROM projects.project_unique_keys WHERE projects.project_unique_keys.key=db.keys.key);
+UPDATE db.keys SET projects=(SELECT projects FROM project_unique_keys WHERE project_unique_keys.key=db.keys.key);
 
 ANALYZE db.keys;
-
--- ============================================================================
-
-UPDATE projects.project_unique_keys SET in_wiki=(SELECT lang_count FROM wiki.wikipages_keys w WHERE projects.project_unique_keys.key = w.key);
-UPDATE projects.project_unique_keys SET in_wiki=0 WHERE in_wiki IS NULL;
-
-UPDATE projects.project_unique_tags SET in_wiki=(SELECT lang_count FROM wiki.wikipages_tags w WHERE projects.project_unique_tags.key = w.key AND projects.project_unique_tags.value = w.value);
-UPDATE projects.project_unique_tags SET in_wiki=0 WHERE in_wiki IS NULL;
-
-UPDATE projects.project_unique_keys SET count_all=(SELECT count_all FROM db.keys WHERE projects.project_unique_keys.key = db.keys.key);
-UPDATE projects.project_unique_keys SET count_all=0 WHERE count_all IS NULL;
-
-WITH tags_count_all AS
-    (SELECT t.key, t.value, t.count_all
-       FROM db.tags t, projects.project_unique_tags p
-       WHERE t.key = p.key AND t.value = p.value)
-UPDATE projects.project_unique_tags SET count_all=(SELECT count_all FROM tags_count_all WHERE projects.project_unique_tags.key = tags_count_all.key AND projects.project_unique_tags.value = tags_count_all.value);
-
-UPDATE projects.project_unique_tags SET count_all=0 WHERE count_all IS NULL;
-
-ANALYZE projects.project_unique_keys;
-ANALYZE projects.project_unique_tags;
 
 -- ============================================================================
 
@@ -121,7 +144,7 @@ UPDATE top_tags SET
 UPDATE top_tags SET in_wiki=1    WHERE skey || '=' || svalue IN (SELECT DISTINCT tag FROM wiki.wikipages WHERE value IS NOT NULL AND value != '*');
 UPDATE top_tags SET in_wiki_en=1 WHERE skey || '=' || svalue IN (SELECT DISTINCT tag FROM wiki.wikipages WHERE value IS NOT NULL AND value != '*' AND lang='en');
 
-UPDATE top_tags SET projects=(SELECT projects FROM projects.project_unique_tags p WHERE p.key=skey AND p.value=svalue);
+UPDATE top_tags SET projects=(SELECT projects FROM project_unique_tags p WHERE p.key=skey AND p.value=svalue);
 
 CREATE UNIQUE INDEX top_tags_key_value_idx ON top_tags (skey, svalue);
 
@@ -188,7 +211,7 @@ INSERT INTO languages (code) SELECT DISTINCT lang FROM wiki.wikipages WHERE lang
 UPDATE languages SET wiki_key_pages=(SELECT count(DISTINCT key) FROM wiki.wikipages WHERE lang=code AND value IS NULL);
 UPDATE languages SET wiki_tag_pages=(SELECT count(DISTINCT key || '=' || value) FROM wiki.wikipages WHERE lang=code AND value IS NOT NULL);
 
-ANALYZE languages;
+ANALYZE main.languages;
 
 -- ============================================================================
 
