@@ -29,14 +29,36 @@
         <li><a href="#characters"><%= h(t.taginfo.characters) %></a></li>
     </ul>
     <div id="overview">
-<% if @image_url %>
-        <div class="wiki_image">
-            <img src="<%= @image_url.sub(/^http:/, '') %>" alt=""/>
-        </div>
-<% end %>
         <h2><%= h(t.pages.relation.overview.title) %></h2>
-        <div id="grid-overview"></div>
-        <p><%= h(t.pages.relation.overview.see_also) %>: type=<span id="taglink"></span></p>
+        <div class="overview-container">
+            <div class="overview-item">
+                <h3><%= h(t.pages.sources.statistics) %></h3>
+                <div id="grid-overview"></div>
+<% if @projects_count > 0 %>
+                <p><%= t.pages.relation.overview.known_projects(@projects_count) %></p>
+<% end %>
+            </div>
+<% if @wikipages.size > 0 %>
+            <div class="overview-item overview-item-wiki">
+                <h3><%= h(t.taginfo.wiki) %></h3>
+<% if @wikipage_en %>
+                <p><a class="extlink" target="_blank" href="https://wiki.openstreetmap.org/<%= @wikipage_en[:title] %>"><%= @wikipage_en[:title] %></a></p>
+<% end %>
+                <div>
+<% @wikipages.each do |row| %>
+                    <a class="badge lang" target="_blank" data-tooltip-position="OnTop" data-tooltip-text="<%= row[:native] %> (<%= row[:english] %>)" href="https://wiki.openstreetmap.org/<%= row[:title] %>"><%= row[:lang] %></a>
+<% end %>
+                </div>
+<% if @image_url %>
+                <div class="overview-item-wiki-image" style="background-image: url(<%= @image_url.sub(/^http:/, '') %>);"></div>
+<% end %>
+            </div>
+<% end %>
+            <div class="overview-item">
+                <h3><%= h(t.taginfo.links) %></h3>
+                <p><%= h(t.pages.relation.overview.see_also) %>: type=<span id="taglink"></span></p>
+            </div>
+        </div>
     </div>
     <div id="roles">
         <h2><%= h(t.pages.relation.roles.title) %></h2>
@@ -57,7 +79,7 @@
             <div id="grid-wiki"></div>
         <% else %>
             <p class="empty"><%= h(t.pages.relation.wiki_pages.none_found) %></p>
-            <p><a class="extlink" target="_blank" rel="nofollow" href="//wiki.openstreetmap.org/w/index.php?action=edit&title=Relation:<%= @rtype_uri %>"><%= h(t.pages.relation.wiki_pages.create) %></a></p>
+            <p><a class="extlink" target="_blank" rel="nofollow" href="//wiki.openstreetmap.org/w/index.php?action=edit&redlink=1&title=Relation:<%= @rtype_uri %>"><%= h(t.pages.relation.wiki_pages.create) %></a></p>
         <% end %>
     </div>
     <div id="projects">

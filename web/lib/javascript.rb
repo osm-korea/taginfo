@@ -1,8 +1,14 @@
 # web/lib/javascript.rb
 
-def javascript(url = nil, &block)
+def javascript(url)
     @javascript ||= []
-    @javascript << Javascript.new(url, &block)
+    @javascript << Javascript.new(url)
+end
+
+def javascript_if_exists(url)
+    return unless File.exist?("public/js/#{ url }.js")
+
+    javascript url
 end
 
 def javascript_tags

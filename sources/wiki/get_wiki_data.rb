@@ -18,7 +18,7 @@
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2013-2023  Jochen Topf <jochen@topf.org>
+#  Copyright (C) 2013-2025  Jochen Topf <jochen@topf.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -47,9 +47,6 @@ require 'mediawikiapi'
 # Descriptions of keys and tags should only contain plain text, not HTML,
 # wiki templates, links or other wiki syntax.
 PROBLEMATIC_DESCRIPTION = %r{[<>{}\[\]]}.freeze
-
-# The format of a wikidata item.
-WIKIDATA_FORMAT = %r{^Q[0-9]+}.freeze
 
 # The format of a mediawiki page title.
 PAGE_TITLE_FORMAT = %r{^([-_:.,= ()]|[[:alnum:]])+$}.freeze
@@ -80,7 +77,7 @@ class WikiPage
                 :tags_implies, :tags_combination, :tags_linked,
                 :parsed, :has_templ, :group,
                 :on_node, :on_way, :on_area, :on_relation,
-                :approval_status, :statuslink, :wikidata
+                :approval_status, :statuslink
 
     def self.pages
         @@pages.values.sort{ |a, b| a.title <=> b.title }
@@ -186,9 +183,10 @@ class WikiPage
             # do the right thing depending on next token
             case m[2]
             when '{{' # start of template
-                if %r(^!}}).match(m[3])
+                case m[3]
+                when %r(^!}})
                     text[0..2] = '|'
-                elsif %r(^=}}).match(m[3])
+                when %r(^=}})
                     text[0..2] = '='
                 else
                     context.last.add_parameter(m[1].strip)
@@ -334,7 +332,7 @@ class WikiPage
                 @description = desc.join.strip
                 if PROBLEMATIC_DESCRIPTION.match(@description)
                     puts "ERROR: problematic description: #{ @description }"
-                    db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'description parameter should only contain plain text', ?, ?, ?, ?, ?)", [title, lang, key, value, description])
+                    db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'description parameter contains characters that might be problematic', ?, ?, ?, ?, ?)", [title, lang, key, value, description])
                 end
             end
         end
@@ -378,21 +376,12 @@ class WikiPage
             @approval_status = template.named_parameters['status'].join(',')
         end
 
-        if template.named_parameters['statuslink']
-            @statuslink = template.named_parameters['statuslink'][0]
-            if @statuslink.instance_of?(Template)
-                @statuslink = nil
-            end
-        end
+        return unless template.named_parameters['statuslink']
 
-        return unless template.named_parameters['wikidata']
+        @statuslink = template.named_parameters['statuslink'][0]
+        return unless @statuslink.instance_of?(Template)
 
-        wikidata = template.named_parameters['wikidata'][0]
-        if WIKIDATA_FORMAT.match(wikidata)
-            @wikidata = wikidata
-        else
-            db.execute("INSERT INTO problems (location, reason, title, lang, key, value, info) VALUES ('Template:Key/Value/RelationDescription', 'wikidata parameter does not match Q###', ?, ?, ?, ?, ?)", [title, lang, key, value, wikidata])
-        end
+        @statuslink = nil
     end
 
     def parse_template(template, level, db)
@@ -439,7 +428,7 @@ class KeyOrTagPage < WikiPage
 
     def insert(db)
         db.execute(
-            "INSERT INTO wikipages (lang, tag, key, value, title, body, tgroup, type, has_templ, parsed, redirect_target, description, image, osmcarto_rendering, on_node, on_way, on_area, on_relation, tags_implies, tags_combination, tags_linked, approval_status, statuslink, wikidata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO wikipages (lang, tag, key, value, title, body, tgroup, type, has_templ, parsed, redirect_target, description, image, osmcarto_rendering, on_node, on_way, on_area, on_relation, tags_implies, tags_combination, tags_linked, approval_status, statuslink) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 lang,
                 tag,
@@ -463,8 +452,7 @@ class KeyOrTagPage < WikiPage
                 tags_combination.sort.uniq.join(','),
                 tags_linked.sort.uniq.join(','),
                 approval_status,
-                statuslink,
-                wikidata
+                statuslink
             ]
         )
     end

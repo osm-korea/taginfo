@@ -1,4 +1,3 @@
-
 osm:
     tag: 標籤
     tags: 標籤
@@ -86,6 +85,7 @@ misc:
     in_wiki_tooltip: 有至少一個 wiki 頁面。
     status: 狀態
     approval_status: 批准狀態
+    other: 其他
 
 help:
     search:
@@ -132,6 +132,7 @@ help:
         deactivate: 停用輸入欄位
         up: 上一層頁面
         switch_input: 在輸入欄位之間切換
+        add_to_comparison: 新增目前鍵/標籤到比較表
 
 pages:
     not_found:
@@ -148,7 +149,7 @@ pages:
         reports:
             listreports: 檢視所有報告...
         about:
-            intro:
+            intro: |
                 <p>OpenStreetMap 用<b>鍵=值</b>格式的<b>標籤</b>
                 來為地理物件增加意義。taginfo 從數個來源收集這些標籤的資訊
                 來幫助你知道這些標籤的意義和他們被怎麼用。</p>
@@ -175,8 +176,7 @@ pages:
             title: 關於此網站
         building_on_taginfo:
             title: 用 taginfo 開發
-            pre: |
-                <p>你可以在自己的專案中使用來自 taginfo 的資料：</p>
+            pre: '你可以在自己的專案中使用來自 taginfo 的資料：'
             api: |
                 <h3>API</h3>
                 <p>Taginfo 資料可由 REST API 存取。看看
@@ -231,13 +231,12 @@ pages:
                 跟我們聯絡。</p>
     sources:
         intro: |
-            <p>Taginfo 從數個來源收集關於 OSM 標籤的資訊並
-            集中在一起以便於瀏覽和探索。</p>
-            <p>注意 taginfo 只顯示此資料。如果你想改變它，
-            你必須回到資料來源處。</p>
-        list:
-            title: 來源列表
-            intro: 這是目前使用的資料來源列表，未來可能會整合更多來源。
+            Taginfo 從數個來源收集關於 OSM 標籤的資訊並
+            集中在一起以便於瀏覽和探索。
+            這是目前使用的資料來源列表，未來可能會整合更多來源。
+        display_only: |
+            注意 taginfo 只顯示此資料。如果你想改變它，
+            你必須回到資料來源處。
         description:
             db: |
                 <p>關於鍵、標籤和關係類型的統計數據皆產生自 <a class="extlink" href="https://planet.openstreetmap.org/">OSM 資料庫</a>（或某個提取檔），跟地圖上的節點和路徑一樣。</p>
@@ -246,9 +245,11 @@ pages:
             languages: |
                 <p>Taginfo 取得世界不同語言的資料，它們的代碼、名稱等來自數個 <a class="extlink" href="https://www.iana.org/">IANA</a> 和 <a class="extlink" href="https://www.unicode.org/">Unicode</a> 登記名冊。</p>
             projects: |
-                <p>以一些方式使用 OSM 標籤的專案，像是編輯器、路線規劃等，請見<a href="projects">專案列表</a>。</p>
+                <p>以一些方式使用 OSM 標籤的專案，像是編輯器、路線規劃等，請見專案列表。</p>
             chronology: |
                 <p><a class="extlink" href="https://planet.openstreetmap.org/planet/full-history/">歷史星球</a>上隨時間變化的鍵/標籤數量。</p>
+            wikidata: |
+                <p>運用<a href="https://www.wikidata.org/wiki/Property:P1282">P1282屬性連結</a><a class="extlink" href="https://www.wikidata.org/">Wikidata資料庫</a>與OSM鍵、標籤與關係到其他概念上。</p>
         updates:
             title: 更新
             intro: taginfo 資料定期地從來源更新。
@@ -256,6 +257,110 @@ pages:
         last_update_run: 上次執行更新
         data_until_explanation: 所有直到此時的編輯會在資料裡，更晚的編輯可能會有。
         to: 到
+        data: 資料
+        database_size: 資料庫大小
+        minutes: 分鐘
+        statistics: 統計
+        import_errors: 匯入錯誤
+        languages:
+            subtags:
+                title: BCP47 子標籤
+                filter:
+                    label: 只顯示子標籤類型
+                    all: 全部
+                    language: 語言
+                    script: 文字
+                    region: 地區
+                    variant: 變體
+                intro: |
+                    <p><a href="https://www.ietf.org/">IETF</a> 在它的 <a href="https://tools.ietf.org/html/bcp47">Tags for Identifying Languages
+                    (BCP47)</a> 標準中定義了<i>語言代碼</i>
+                    。語言代碼包含一個或更多描述該語言、文字、變體等的<i>子標籤</i>。
+                    下方列表顯示目前在 OSM 中被登記為適合的子標籤。
+                    更多資訊參見
+                    <a href="https://en.wikipedia.org/wiki/IETF_language_tag">在維基百科
+                    上的 IETF 語言標籤文章</a>和<a
+                    href="http://www.langtag.net/">langtag.net</a>網站。</p>
+                note: |
+                    注意此表格顯示的資料不是來自 OpenStreetMap，
+                    這些只是可以用來描述語言的積木，無關於有沒有真正用在 OSM 裡。
+                show: 顯示所有語言子標籤...
+            wikipedia_sites:
+                title: 維基百科網站
+        wikidata:
+            index:
+                show_items: 顯示所有Wikidata項目...
+                show_errors: 顯示所有錯誤...
+            stats:
+                keys: 鍵項目
+                tags: 標籤項目
+                relations: 關係項目
+                roles: 角色項目
+                qcode: 有 Q 值的項目
+                pcode: 有 P 值的項目
+            items:
+                title: 項目
+                description: |
+                    這些是有屬性P1282與OSM鍵、標籤或關係連結的Wikidata項目。沒有顯示的為"角色"類型屬性，以及其他沒有正確格式的項目。
+                columns:
+                    type: 種類
+                    ktr: 鍵/標籤/關係
+                    item: Wikidata項目
+            errors:
+                description: |
+                    這些是所有帶有屬性P1282的Wikidata項目匯入遇到的問題。
+                columns:
+                    item: Wikidata項目
+                    p1282: 屬性P1282的值
+                    error: 錯誤訊息
+        wiki:
+            language_comparison_table_for_keys:
+                name: wiki 裡的鍵頁面的語言比較
+                icons:
+                    template: 有 wiki 頁面且包含標準模板。
+                    error: 有 wiki 頁面且包含標準模板，但無法分析。
+                    page: 有 wiki 頁面但不包含標準模板。
+                    redirect: 重新導向頁面。
+                intro: |
+                    此表格顯示有 wiki 頁面的所有標籤鍵，以及它們有什麼語言。
+            parsing_problems:
+                name: Wiki 解析問題
+                intro: |
+                    Taginfo 讀取所有用來描述鍵、標籤和關係的 wiki 頁面
+                    來找到關於標籤的資訊。此報告列出
+                    在讀取這些頁面時遇到的問題。這些不一定是 wiki 裡的錯誤，
+                    這只是代表在 wiki 頁面裡的某物不是用 taginfo 了解的格式。
+                    可能是該頁面或 taginfo 需要修正。
+                location: 位置
+                reason: 原因
+                wiki_page: Wiki 頁面
+                lang: 語言
+                info: 額外資訊
+            image_comparison:
+                name: Wiki 圖片
+                intro: |
+                    在 wiki 中不同語言用來象徵鍵的圖片。
+                    有時來自其他語言的圖片比較好，
+                    但有時候會因為不同的文化背景等而有不同圖片。
+        db:
+            stats:
+                name: 資料庫統計資料
+                objects_in_db: 資料庫裡的物件數量
+                tags_in_db: 資料庫裡的標籤數量
+                distinct_keys: 相異的鍵數量
+                distinct_tags: 相異的標籤數量
+                nodes_in_db: 資料庫裡的節點數量
+                nodes_with_tags_in_db: 至少有一個標籤的節點數量
+                nodes_with_tags_in_db_percent: 至少有一個標籤的節點百分比
+                tags_on_nodes: 在節點上的標籤數量
+                avg_tags_per_tagged_node: 每個已標籤節點的平均標籤數量
+                ways_in_db: 資料庫裡的路徑數量
+                closed_ways_in_db: 封閉路徑的數量
+                tags_on_ways: 在路徑上的標籤數量
+                avg_tags_per_way: 每個路徑的平均標籤數量
+                relations_in_db: 資料庫裡的關係數量
+                tags_on_relations: 關係的標籤數量
+                avg_tags_per_relation: 每個關係的平均標籤數量
     download:
         intro: |
             <p>你能在這裡下載 taginfo 所用的資料庫。所有資料被儲存
@@ -287,10 +392,10 @@ pages:
         nothing_to_compare: 沒有鍵或標籤可以比較。去任何鍵或標籤頁面新增它們。
     keys:
         intro: |
-                此表格顯示所有存在資料庫或任何其他來源裡的標籤鍵。
+            此表格顯示所有存在資料庫或任何其他來源裡的標籤鍵。
     tags:
         intro: |
-                此表格顯示資料庫裡最常用的標籤。
+            此表格顯示資料庫裡最常用的標籤。
     relations:
         name: 關係類型
         intro: 關於不同類型的關係的資訊（被 <a href="keys/type?filter=relations">type</a> 標籤指出的）。
@@ -302,13 +407,13 @@ pages:
         empty_role: 空角色
     projects:
         intro: |
-                此表格展示所有以一些方式使用 OSM 標籤的 taginfo 已知專案。<br/>更多關於功能請見 <a href="//wiki.openstreetmap.org/wiki/Taginfo/Projects" class="extlink">wiki</a>。
+            此表格展示所有以一些方式使用 OSM 標籤的 taginfo 已知專案。<br/>更多關於功能請見 <a href="//wiki.openstreetmap.org/wiki/Taginfo/Projects" class="extlink">wiki</a>。
     key:
         description_from_wiki: 此鍵在 wiki 上的描述（除非有你選擇的語言，否則都是英文）。
         no_description_in_wiki: 此鍵在 wiki 上沒有英文描述。（參見「wiki」分頁）。
         filter:
             label: |
-                 篩選器：
+                篩選器：
             none: 沒有篩選器
             nodes: 只有節點
             ways: 只有路徑
@@ -423,6 +528,9 @@ pages:
         projects:
             title: 使用此關係類型的專案
             description: 此關係類型被怎麼用在專案裡
+        characters:
+            title: 此關係中的 Unicode 字符
+
     project:
         overview:
             project_name: 專案名稱
@@ -447,6 +555,7 @@ dynamic_table:
     procmsg: 處理中，請稍後...
     nomsg: 沒有項目
     errormsg: 連接錯誤
+    filter_nothing_found: 沒有找到符合的檢索結果。
 
 comparison:
     list: 比較列表
@@ -478,6 +587,9 @@ sources:
     chronology:
         name: 年表
         description: 歷史星球上隨時間變化的鍵/標籤數量。
+    wikidata:
+        name: Wikidata
+        description: 維基媒體Wikidata資料庫能連接OSM鍵、標籤與關係到其他概念。
 
 unicode:
     character: 字符
@@ -553,24 +665,6 @@ reports:
             title: 其他的鍵
             intro: |
                 <p>不符合任何其他分類的鍵。</p>
-    database_statistics:
-        name: 資料庫統計資料
-        objects_in_db: 資料庫裡的物件數量
-        tags_in_db: 資料庫裡的標籤數量
-        distinct_keys: 相異的鍵數量
-        distinct_tags: 相異的標籤數量
-        nodes_in_db: 資料庫裡的節點數量
-        nodes_with_tags_in_db: 至少有一個標籤的節點數量
-        nodes_with_tags_in_db_percent: 至少有一個標籤的節點百分比
-        tags_on_nodes: 在節點上的標籤數量
-        avg_tags_per_tagged_node: 每個已標籤節點的平均標籤數量
-        ways_in_db: 資料庫裡的路徑數量
-        closed_ways_in_db: 封閉路徑的數量
-        tags_on_ways: 在路徑上的標籤數量
-        avg_tags_per_way: 每個路徑的平均標籤數量
-        relations_in_db: 資料庫裡的關係數量
-        tags_on_relations: 關係的標籤數量
-        avg_tags_per_relation: 每個關係的平均標籤數量
     frequently_used_keys_without_wiki_page:
         name: 沒有 wiki 頁面的常用鍵
         intro: |
@@ -593,15 +687,6 @@ reports:
             intro: 此直方圖顯示每個長度有多少鍵。
             key_length: 鍵長度
             number_of_keys: 鍵數量
-    language_comparison_table_for_keys_in_the_wiki:
-        name: wiki 裡的鍵頁面的語言比較
-        icons:
-            template: 有 wiki 頁面且包含標準模板。
-            error: 有 wiki 頁面且包含標準模板，但無法分析。
-            page: 有 wiki 頁面但不包含標準模板。
-            redirect: 重新導向頁面。
-        intro: |
-            此表格顯示有 wiki 頁面的所有標籤鍵，以及它們有什麼語言。
     languages:
         name: 語言
         intro: |
@@ -626,28 +711,6 @@ reports:
         overview:
             tab: 總覽
             title: 總覽
-        bcp47:
-            tab: BCP47 子標籤
-            title: BCP47 子標籤
-            filter:
-                label: 只顯示子標籤類型
-                all: 全部
-                language: 語言
-                script: 文字
-                region: 地區
-                variant: 變體
-            intro: |
-                <p><a href="https://www.ietf.org/">IETF</a> 在它的 <a href="https://tools.ietf.org/html/bcp47">Tags for Identifying Languages
-                (BCP47)</a> 標準中定義了<i>語言代碼</i>
-                。語言代碼包含一個或更多描述該語言、文字、變體等的<i>子標籤</i>。
-                下方列表顯示目前在 OSM 中被登記為適合的子標籤。
-                更多資訊參見
-                <a href="https://en.wikipedia.org/wiki/IETF_language_tag">在維基百科
-                上的 IETF 語言標籤文章</a>和<a
-                href="http://www.langtag.net/">langtag.net</a>網站。</p>
-                <p>注意此表格顯示的資料<b>不是</b>來自 OpenStreetMap，
-                這些只是可以用來描述語言的積木，無關於有沒有真正用在 OSM 裡。
-                </p>
     similar_keys:
         name: 相似的鍵
         intro: |
@@ -672,23 +735,3 @@ reports:
             title: 獨特標籤
         relation_types:
             title: 獨特關係類型
-    wiki_images:
-        name: Wiki 圖片
-        intro: |
-            在 wiki 中不同語言用來象徵鍵的圖片。
-            有時來自其他語言的圖片比較好，
-            但有時候會因為不同的文化背景等而有不同圖片。
-    wiki_problems:
-        name: Wiki 解析問題
-        intro: |
-            Taginfo 讀取所有用來描述鍵、標籤和關係的 wiki 頁面
-            來找到關於標籤的資訊。此報告列出
-            在讀取這些頁面時遇到的問題。這些不一定是 wiki 裡的錯誤，
-            這只是代表在 wiki 頁面裡的某物不是用 taginfo 了解的格式。
-            可能是該頁面或 taginfo 需要修正。
-        location: 位置
-        reason: 原因
-        wiki_page: Wiki 頁面
-        lang: 語言
-        info: 額外資訊
-

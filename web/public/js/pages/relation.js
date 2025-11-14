@@ -4,43 +4,40 @@ const tabsConfig = {
             url: '/api/4/relation/stats',
             params: { rtype: rtype },
             colModel: [
-                { display: h(texts.pages.relation.overview.member_type), name: 'type', width: 100, sortable: true },
-                { display: h(texts.pages.relation.overview.member_count), name: 'count', width: 260, sortable: true, align: 'right' }
+                { display: h(texts.pages.relation.overview.member_type), name: 'type', width: 90, sortable: true },
+                { display: h(texts.pages.relation.overview.member_count), name: 'count', width: 50, sortable: true, align: 'right' }
             ],
             usePager: false,
-            processRow: row => {
-                return [
-                    fmt_type_image(row.type),
-                    fmt_with_ts(row.count)
-                ];
-            }
+            processRow: row => [
+                fmt_type_image(row.type),
+                fmt_with_ts(row.count)
+            ]
         });
     },
     roles: function(rtype) {
         return new DynamicTable('grid-roles', {
             url: '/api/4/relation/roles',
+            csv: true,
             params: { rtype: rtype },
             colModel: [
-                { display: h(texts.osm.relation_member_role), name: 'role', width: 250, sortable: true },
-                { display: '<img src="/img/types/all.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_members), name: 'count_all_members', width: 250, sortable: true, align: 'center', title: h(texts.pages.relation.roles.objects_tooltip) },
-                { display: '<img src="/img/types/node.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_member_nodes), name: 'count_node_members', width: 250, sortable: true, align: 'center', title: h(texts.pages.relation.roles.nodes_tooltip) },
-                { display: '<img src="/img/types/way.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_member_ways), name: 'count_way_members', width: 250, sortable: true, align: 'center', title: h(texts.pages.relation.roles.ways_tooltip) },
-                { display: '<img src="/img/types/relation.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_member_relations), name: 'count_relation_members', width: 250, sortable: true, align: 'center', title: h(texts.pages.relation.roles.relations_tooltip) },
+                { display: h(texts.osm.relation_member_role), name: 'role', width: 120, sortable: true },
+                { display: '<img src="/img/types/all.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_members), name: 'count_all_members', width: 240, sortable: true, align: 'center', title: h(texts.pages.relation.roles.objects_tooltip) },
+                { display: '<img src="/img/types/node.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_member_nodes), name: 'count_node_members', width: 240, sortable: true, align: 'center', title: h(texts.pages.relation.roles.nodes_tooltip) },
+                { display: '<img src="/img/types/way.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_member_ways), name: 'count_way_members', width: 240, sortable: true, align: 'center', title: h(texts.pages.relation.roles.ways_tooltip) },
+                { display: '<img src="/img/types/relation.svg" width="16" height="16" alt=""/> ' + h(texts.osm.relation_member_relations), name: 'count_relation_members', width: 240, sortable: true, align: 'center', title: h(texts.pages.relation.roles.relations_tooltip) },
             ],
             searchitems: [
                 { display: h(texts.osm.relation_member_role), name: 'role' }
             ],
             sortname: 'count_all_members',
             sortorder: 'desc',
-            processRow: row => {
-                return [
-                    fmt_role(row.role),
-                    fmt_value_with_percent(row.count_all_members, row.count_all_members_fraction),
-                    fmt_value_with_percent(row.count_node_members, row.count_node_members_fraction),
-                    fmt_value_with_percent(row.count_way_members, row.count_way_members_fraction),
-                    fmt_value_with_percent(row.count_relation_members, row.count_relation_members_fraction)
-                ];
-            },
+            processRow: row => [
+                fmt_role(row.role),
+                fmt_value_with_percent(row.count_all_members, row.count_all_members_fraction),
+                fmt_value_with_percent(row.count_node_members, row.count_node_members_fraction),
+                fmt_value_with_percent(row.count_way_members, row.count_way_members_fraction),
+                fmt_value_with_percent(row.count_relation_members, row.count_relation_members_fraction)
+            ],
             empty: h(texts.pages.relation.roles.no_roles_info)
         });
     },
@@ -52,10 +49,10 @@ const tabsConfig = {
             url: '/api/4/relation/wiki_pages',
             params: { rtype: rtype },
             colModel: [
-                { display: h(texts.misc.language), name: 'lang', width: 150 },
-                { display: h(texts.pages.relation.wiki_pages.wiki_page), name: 'title', width: 160, align: 'right' },
-                { display: h(texts.misc.description), name: 'description', width: 500 },
-                { display: h(texts.misc.image), name: 'image', width: 300 }
+                { display: h(texts.misc.language), name: 'lang', width: 100 },
+                { display: h(texts.pages.relation.wiki_pages.wiki_page), name: 'title', width: 140, align: 'right' },
+                { display: h(texts.misc.description), name: 'description', width: 400 },
+                { display: h(texts.misc.image), name: 'image', width: 100 }
             ],
             usePager: false,
             processRow: row => {
@@ -72,10 +69,11 @@ const tabsConfig = {
     projects: function(rtype) {
         return new DynamicTable('grid-projects', {
             url: '/api/4/relation/projects',
+            csv: true,
             params: { rtype: rtype },
             colModel: [
                 { display: h(texts.taginfo.project), name: 'project_name', width: 280, sortable: true },
-                { display: h(texts.pages.relation.projects.description), name: 'description', width: 600 }
+                { display: h(texts.pages.relation.projects.description), name: 'description', width: 320 }
             ],
             searchitems: [
                 { display: h(texts.taginfo.project) + '/' + h(texts.osm.value), name: 'project_value' }
@@ -290,7 +288,6 @@ class ChartRoles {
 } // class ChartRoles
 
 function page_init() {
-    up = function() { window.location = build_link('/relations'); };
     activateJOSMButton();
     activateTagHistoryButton([{ type: 'relation', key: 'type', value: context.rtype }]);
     activateOhsomeButton('relations', 'type', context.rtype);

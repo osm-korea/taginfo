@@ -1,29 +1,34 @@
 const tabsConfig = {
     overview: function(key, value, filter_type) {
-        return new DynamicTable('grid-overview', {
-            url: '/api/4/tag/stats',
-            params: { key: key, value: value },
-            colModel: [
-                { display: h(texts.misc.object_type), name: 'type', width: 100 },
-                { display: h(texts.pages.tag.number_objects), name: 'count', width: 260, align: 'center' }
-            ],
-            usePager: false,
-            processRow: row => {
-                return [
+        return [
+            new DynamicTable('grid-overview', {
+                url: '/api/4/tag/stats',
+                params: { key: key, value: value },
+                colModel: [
+                    { display: h(texts.misc.object_type), name: 'type', width: 90 },
+                    { display: h(texts.pages.tag.number_objects), name: 'count', width: 120, align: 'center' }
+                ],
+                usePager: false,
+                processRow: row => [
                     fmt_type_image(row.type),
-                    fmt_value_with_percent(row.count, row.count_fraction)
-                ];
-            }
-        });
+                    tag('div',
+                        tag('div', fmt_with_ts(row.count), { 'class': 'value' }) +
+                        tag('div', fmt_as_percent(row.count_fraction), { 'class': 'fraction' }),
+                        { 'class': 'value-fraction' })
+                ]
+            }),
+            new ChartChronology('overview-chronology', build_link('/api/4/tag/chronology', { key: key, value: value }), filter.value, 190)
+        ];
     },
     combinations: function(key, value, filter_type) {
         return new DynamicTable('grid-combinations', {
             url: '/api/4/tag/combinations',
+            csv: true,
             params: { key: key, value: value, filter: filter_type },
             colModel: [
-                { display: h(texts.misc.count) + ' &rarr;', name: 'to_count', width: 260, sortable: true, align: 'center', title: h(texts.pages.tag.other_tags_used.to_count_tooltip) },
-                { display: h(texts.pages.tag.other_tags_used.other), name: 'other_tag', width: 400, sortable: true, title: h(texts.pages.tag.other_tags_used.other_key_tooltip) },
-                { display: '&rarr; ' + h(texts.misc.count), name: 'from_count', width: 260, sortable: true, align: 'center', title: h(texts.pages.tag.other_tags_used.from_count_tooltip) }
+                { display: h(texts.misc.count) + ' &rarr;', name: 'to_count', width: 250, sortable: true, align: 'center', title: h(texts.pages.tag.other_tags_used.to_count_tooltip) },
+                { display: h(texts.pages.tag.other_tags_used.other), name: 'other_tag', width: 180, sortable: true, title: h(texts.pages.tag.other_tags_used.other_key_tooltip) },
+                { display: '&rarr; ' + h(texts.misc.count), name: 'from_count', width: 250, sortable: true, align: 'center', title: h(texts.pages.tag.other_tags_used.from_count_tooltip) }
             ],
             searchitems: [
                 { display: h(texts.pages.tag.other_tags_used.other), name: 'other_tag' }
@@ -41,7 +46,7 @@ const tabsConfig = {
         });
     },
     chronology: function(key, value) {
-        return new ChartChronology(build_link('/api/4/tag/chronology', { key: key, value: value }), filter.value);
+        return new ChartChronology('chart-chronology', build_link('/api/4/tag/chronology', { key: key, value: value }), filter.value, 400);
     },
     wiki: function(key, value) {
         if (!document.getElementById('grid-wiki')) {
@@ -51,12 +56,12 @@ const tabsConfig = {
             url: '/api/4/tag/wiki_pages',
             params: { key: key, value: value },
             colModel: [
-                { display: h(texts.misc.language), name: 'lang', width: 150 },
-                { display: h(texts.pages.tag.wiki_pages.wiki_page), name: 'title', width: 200, align: 'right' },
-                { display: h(texts.misc.description), name: 'description', width: 400 },
-                { display: h(texts.misc.image), name: 'image', width: 120 },
+                { display: h(texts.misc.language), name: 'lang', width: 100 },
+                { display: h(texts.pages.tag.wiki_pages.wiki_page), name: 'title', width: 180, align: 'right' },
+                { display: h(texts.misc.description), name: 'description', width: 300 },
+                { display: h(texts.misc.image), name: 'image', width: 100 },
                 { display: h(texts.osm.objects), name: 'objects', width:  80 },
-                { display: h(texts.misc.status), name: 'status', width: 60, title: h(texts.misc.approval_status) },
+                { display: h(texts.misc.status), name: 'status', width: 70, title: h(texts.misc.approval_status) },
                 { display: h(texts.pages.tag.wiki_pages.implied_tags), name: 'tags_implied', width: 120 },
                 { display: h(texts.pages.tag.wiki_pages.combined_tags), name: 'tags_combination', width: 120 },
                 { display: h(texts.pages.tag.wiki_pages.linked_tags), name: 'tags_linked', width: 220 }
@@ -84,10 +89,11 @@ const tabsConfig = {
     projects: function(key, value, filter_type) {
         return new DynamicTable('grid-projects', {
             url: '/api/4/tag/projects',
+            csv: true,
             params: { key: key, value: value, filter: filter_type },
             colModel: [
-                { display: h(texts.taginfo.project), name: 'project_name', width: 280, sortable: true },
-                { display: h(texts.osm.tag), name: 'tag', width: 220, sortable: true },
+                { display: h(texts.taginfo.project), name: 'project_name', width: 250, sortable: true },
+                { display: h(texts.osm.tag), name: 'tag', width: 200, sortable: true },
                 { display: h(texts.osm.objects), name: 'objects', width:  80 },
                 { display: h(texts.pages.tag.projects.description), name: 'description', width: 200 }
             ],
@@ -126,6 +132,9 @@ function page_init() {
     filter.addEventListener('change', function(element) {
         if (element.target.value != 'all') {
             tag.params.filter = element.target.value;
+        }
+        if (window.location.hash != '') {
+            tag.tab = window.location.hash.substring(1);
         }
         window.location = tag.url();
     });

@@ -9,7 +9,9 @@
 
 set -euo pipefail
 
-readonly SRCDIR=$(dirname "$(readlink -f "$0")")
+SRCDIR=$(dirname "$(readlink -f "$0")")
+readonly SRCDIR
+
 readonly DATADIR=$1
 
 if [ -z "$DATADIR" ]; then
@@ -39,6 +41,9 @@ create_master_database() {
     fi
     if [ -e "$DATADIR/wikidata/taginfo-wikidata.db" ]; then
         run_sql "DIR=$DATADIR" "$MASTER_DB" "$SRCDIR/master-wikidata.sql"
+    fi
+    if [ -e "$DATADIR/sw/taginfo-sw.db" ]; then
+        run_sql "DIR=$DATADIR" "$MASTER_DB" "$SRCDIR/master-sw.sql"
     fi
 }
 

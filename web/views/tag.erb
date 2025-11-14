@@ -54,22 +54,51 @@
         <li><a href="#characters"><%= h(t.taginfo.characters) %></a></li>
     </ul>
     <div id="overview">
-<% if @image_url %>
-        <div class="wiki_image">
-            <img src="<%= @image_url.sub(/^http:/, '') %>" alt=""/>
-        </div>
-<% end %>
         <h2><%= h(t.taginfo.overview) %></h2>
-        <div id="grid-overview"></div>
-<% if @has_rtype_link or @links.size > 0 %>
-        <h2><%= h(t.taginfo.links) %></h2>
+        <div class="overview-container">
+            <div class="overview-item">
+                <h3><%= h(t.pages.sources.statistics) %></h3>
+                <div id="grid-overview"></div>
+<% if @projects_count > 0 %>
+                <p><%= t.pages.tag.overview.known_projects(@projects_count) %></p>
+<% end %>
+            </div>
+<% if @has_chronology %>
+            <div class="overview-item">
+                <h3><%= h(t.taginfo.chronology) %></h3>
+                <div id="overview-chronology"></div>
+            </div>
+<% end %>
+<% if @wikipages.size > 0 %>
+            <div class="overview-item overview-item-wiki">
+                <h3><%= h(t.taginfo.wiki) %></h3>
+<% if @wikipage_en %>
+                <p><a class="extlink" target="_blank" href="https://wiki.openstreetmap.org/<%= @wikipage_en[:title] %>"><%= @wikipage_en[:title] %></a></p>
+<% end %>
+                <div>
+<% @wikipages.each do |row| %>
+                    <a class="badge lang" target="_blank" data-tooltip-position="OnTop" data-tooltip-text="<%= row[:native] %> (<%= row[:english] %>)" href="https://wiki.openstreetmap.org/<%= row[:title] %>"><%= row[:lang] %></a>
+<% end %>
+                </div>
+<% if @image_url %>
+                <div class="overview-item-wiki-image" style="background-image: url(<%= @image_url.sub(/^http:/, '') %>);"></div>
+<% end %>
+            </div>
+<% end %>
+<% if @has_link_box %>
+            <div class="overview-item">
+                <h3><%= h(t.taginfo.links) %></h3>
 <% end %>
 <% if @has_rtype_link %>
-        <p><%= h(t.pages.tag.overview.see_also) %>: <span id="relationlink"></span></p>
+                <p><%= h(t.pages.tag.overview.see_also) %>: <span id="relationlink"></span></p>
 <% end %>
 <% @links.each do |link| %>
-        <p><%= link %></p>
+                <p><%= link %></p>
 <% end %>
+<% if @has_link_box %>
+            </div>
+<% end %>
+        </div>
     </div>
     <div id="combinations">
         <div>
@@ -93,24 +122,24 @@
         <% if @has_map %>
             <% if @filter_type == 'all' %>
                 <p><%= h(t.pages.tag.geographic_distribution.all) %></p>
-                <div class="multi-map">
-                    <img class="map" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
-                    <img class="map" src="<%= build_link("/api/4/tag/distribution/nodes?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 2;"/>
-                    <img class="map" src="<%= build_link("/api/4/tag/distribution/ways?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 3; position: relative;"/>
+                <div class="multimap-container">
+                    <img class="multimap-img" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
+                    <img class="multimap-img" src="<%= build_link("/api/4/tag/distribution/nodes?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 2;"/>
+                    <img class="multimap-img" src="<%= build_link("/api/4/tag/distribution/ways?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 3; position: relative;"/>
                     <div class="note"><%= @taginfo_config.get('geodistribution.image_attribution') %></div>
                 </div>
             <% elsif @filter_type == 'nodes' %>
                 <p><%= h(t.pages.tag.geographic_distribution.nodes) %></p>
-                <div class="multi-map">
-                    <img class="map" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
-                    <img class="map" src="<%= build_link("/api/4/tag/distribution/nodes?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 2; position: relative;"/>
+                <div class="multimap-container">
+                    <img class="multimap-img" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
+                    <img class="multimap-img" src="<%= build_link("/api/4/tag/distribution/nodes?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 2; position: relative;"/>
                     <div class="note"><%= @taginfo_config.get('geodistribution.image_attribution') %></div>
                 </div>
             <% elsif @filter_type == 'ways' %>
                 <p><%= h(t.pages.tag.geographic_distribution.ways) %></p>
-                <div class="multi-map">
-                    <img class="map" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
-                    <img class="map" src="<%= build_link("/api/4/tag/distribution/ways?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 3; position: relative;"/>
+                <div class="multimap-container">
+                    <img class="multimap-img" src="<%= @taginfo_config.get('geodistribution.background_image') %>" alt="" style="max-width: <%= @img_width %>px; z-index: 1; background-color: #ddddd4"/>
+                    <img class="multimap-img" src="<%= build_link("/api/4/tag/distribution/ways?key=#{ @key_uri }&value=#{ @value_uri }") %>" alt="" style="max-width: <%= @img_width %>px; z-index: 3; position: relative;"/>
                     <div class="note"><%= @taginfo_config.get('geodistribution.image_attribution') %></div>
                 </div>
             <% elsif @filter_type == 'relations' %>
@@ -126,7 +155,7 @@
             <div id="grid-wiki"></div>
         <% else %>
             <p class="empty"><%= h(t.pages.tag.wiki_pages.none_found) %> <%= @wiki_count_key > 0 ? t.pages.tag.wiki_pages.suggest_key_wiki_page('<span id="keylink"></span>') : '' %></p>
-            <p><a class="extlink" target="_blank" rel="nofollow" href="//wiki.openstreetmap.org/w/index.php?action=edit&title=Tag:<%= escape(@tag) %>"><%= h(t.pages.tag.wiki_pages.create) %></a></p>
+            <p><a class="extlink" target="_blank" rel="nofollow" href="//wiki.openstreetmap.org/w/index.php?action=edit&redlink=1&title=Tag:<%= escape(@tag) %>"><%= h(t.pages.tag.wiki_pages.create) %></a></p>
         <% end %>
     </div>
     <div id="projects">

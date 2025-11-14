@@ -28,12 +28,13 @@ It uses:
 * Ruby (must be at least 3.0)
 * [Sinatra web framework](http://www.sinatrarb.com/) and other ruby libraries
 * curl binary
-* sqlite3 binary (version 3.9 or above with FTS5 and regexp support)
+* sqlite3 binary (version 3.33 or above with FTS5 and regexp support)
 * Optional: Parallel bzip (pbzip2)
+* Optional: Vips image library with [Ruby bindings](https://github.com/libvips/ruby-vips)
 
 Install the Debian/Ubuntu packages:
 ```sh
-$ sudo apt-get install curl sqlite3 sqlite3-pcre
+$ sudo apt-get install curl sqlite3 ruby-vips
 $ sudo apt-get install ruby-passenger libapache2-mod-passenger
 ```
 
@@ -106,6 +107,13 @@ thin restart -C /etc/thin/myapp.site.com
 
 There are a few tests for the Ruby code. Call `rake` in the `web` directory to
 run the tests.
+
+
+## Rubocop
+
+There is a configuration for [Rubocop](https://rubocop.org/). You can run
+Rubocop with `rubocop FILENAME.rb...` to check one or more Ruby files. Fixing
+issues is currently an ongoing process.
 
 
 ## Javascript

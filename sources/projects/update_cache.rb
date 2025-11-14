@@ -3,11 +3,11 @@
 #
 #  Taginfo source: Projects
 #
-#  import.rb
+#  update_cache.rb
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2014-2023  Jochen Topf <jochen@topf.org>
+#  Copyright (C) 2014-2025  Jochen Topf <jochen@topf.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,9 +32,11 @@ require 'time'
 #------------------------------------------------------------------------------
 
 dir = ARGV[0] || '.'
-db = SQLite3::Database.new(dir + '/taginfo-projects.db')
+db = SQLite3::Database.new(dir + '/projects-cache.db')
 
 project_list = ARGV[1] || 'project_list.txt'
+
+USER_AGENT = 'taginfo/1.0 (https://github.com/taginfo/taginfo)'.freeze
 
 #------------------------------------------------------------------------------
 
@@ -56,6 +58,7 @@ def fetch(uri_str, limit = 10)
     end
 
     request = Net::HTTP::Get.new(uri.request_uri)
+    request['User-Agent'] = USER_AGENT
     response = http.request(request)
 
     case response
@@ -68,36 +71,44 @@ def fetch(uri_str, limit = 10)
     end
 end
 
+ids = projects.map{ |id, _| "'#{ id }'" }.join(',')
+
+db.execute("DELETE FROM fetch_log WHERE id NOT IN(#{ ids })")
+
+# Make sure the log is not growing indefinitely
+db.execute("DELETE FROM fetch_log WHERE fetch_status != '200' AND date(fetch_date, '+1 week') < date('now')")
+
 projects.each do |id, url|
     puts "  #{id} #{url}"
+    now = Time.now.utc.iso8601
     begin
         response = fetch(url)
         begin
             last_modified = Time.parse(response['Last-Modified'] || response['Date']).utc.iso8601
         rescue ArgumentError
-            last_modified = Time.now.utc
+            last_modified = now
         end
-        db.execute("INSERT INTO projects (id, json_url, last_modified, fetch_date, fetch_status, fetch_json, status, data_updated) VALUES (?, ?, ?, ?, CAST(? AS TEXT), ?, ?, ?)",
+        if response.code == '200'
+            db.execute("DELETE FROM fetch_log WHERE id=?", [id])
+        end
+        db.execute("INSERT INTO fetch_log (id, json_url, last_modified, fetch_date, fetch_status, fetch_json) VALUES (?, ?, ?, ?, CAST(? AS TEXT), ?)",
                    [
                        id,
                        url,
                        last_modified,
-                       Time.now.utc.iso8601,
+                       now,
                        response.code,
-                       response.body,
-                       (response.code == '200' ? 'OK' : 'FETCH ERROR'),
-                       last_modified
+                       response.body
                    ])
     rescue StandardError
-        db.execute("INSERT INTO projects (id, json_url, fetch_date, fetch_status, status) VALUES (?, ?, ?, ?, ?)",
+        db.execute("INSERT INTO fetch_log (id, json_url, fetch_date, fetch_status) VALUES (?, ?, ?, '999')",
                    [
                        id,
                        url,
-                       Time.now.utc.iso8601,
-                       '500',
-                       'FETCH ERROR'
+                       now,
                    ])
     end
+    sleep(1)
 end
 
 #-- THE END -------------------------------------------------------------------

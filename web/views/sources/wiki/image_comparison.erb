@@ -1,4 +1,6 @@
 <%
+@title.unshift(h(t.pages.sources.wiki.image_comparison.name))
+
 @context[:keys] = @db.select("SELECT DISTINCT key FROM wiki.wikipages WHERE value IS NULL AND image IN (SELECT image FROM wiki.wiki_images) ORDER BY key").execute().map{ |row| row['key'] }
 
 @css = <<'CSS'
@@ -54,14 +56,14 @@ CSS
 %>
 <div>
     <div>
-        <h1><%= h(t.reports.wiki_images.name) %></h1>
-        <p><%= h(t.reports.wiki_images.intro) %></p>
+        <h1><a href="<%= build_link("/sources/#{ @source.id }") %>"><%= @source.name %></a>: <%= h(t.pages.sources.wiki.image_comparison.name) %></h1>
+        <p><%= h(t.pages.sources.wiki.image_comparison.intro) %></p>
     </div>
 </div>
 <div class="box">
     <table class="wiki-images"><tr><td colspan="2">
 <%  lastkey = ''
-    @db.select("SELECT p.key, p.title, p.lang, i.width, i.height, i.image_url, i.thumb_url_prefix, i.thumb_url_suffix FROM wiki.wikipages p, wiki.wiki_images i WHERE i.image=p.image AND p.value IS NULL ORDER BY p.key, p.lang").execute() do |row| %>
+    @db.select("SELECT p.key, p.title, p.lang, i.width, i.height, i.image_url, i.thumb_url_prefix, i.thumb_url_suffix FROM wiki.wikipages p, wiki.wiki_images i WHERE i.image=p.image AND p.value IS NULL ORDER BY p.key, p.lang").execute do |row| %>
 <%  if lastkey[0] != row['key'][0]
       lastkey = row['key'] %>
     </td></tr></table>

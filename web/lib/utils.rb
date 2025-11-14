@@ -85,11 +85,11 @@ def xapi_url(element, key, value = nil)
 end
 
 def xapi_link(element, key, value = nil)
-    external_link('xapi_button', 'XAPI', xapi_url(element, key, value), true)
+    external_link('xapi_button', 'XAPI', xapi_url(element, key, value), new_window: true)
 end
 
 def josm_link(element, key, value = nil)
-    external_link('josm_button', 'JOSM', 'http://127.0.0.1:8111/import?url=' + Rack::Utils.escape(xapi_url(element, key, value)), true)
+    external_link('josm_button', 'JOSM', 'http://127.0.0.1:8111/import?url=' + Rack::Utils.escape(xapi_url(element, key, value)), new_window: true)
 end
 
 def quote_double(text)
@@ -126,7 +126,7 @@ def turbo_link(count, filter, key, value = nil)
         url = @taginfo_config.get('turbo.url_prefix', 'https://overpass-turbo.eu/?') + Rack::Utils.build_query(parameters)
     end
 
-    external_link('turbo_button', 'Overpass turbo', url, true)
+    external_link('turbo_button', 'Overpass turbo', url, new_window: true)
 end
 
 def level0_url(filter, key, value)
@@ -136,15 +136,16 @@ def level0_url(filter, key, value)
     end
     query += '"];'
 
-    if filter == 'nodes'
-        query = 'node' + query
-    elsif filter == 'ways'
-        query = '(way' + query + '>;);'
-    elsif filter == 'relations'
-        query = 'rel' + query
-    else
-        query = '(node' + query + 'way' + query + '>;rel' + query + ');'
-    end
+    query = case filter
+            when 'nodes'
+                'node' + query
+            when 'ways'
+                '(way' + query + '>;);'
+            when 'relations'
+                'rel' + query
+            else
+                '(node' + query + 'way' + query + '>;rel' + query + ');'
+            end
 
     overpass_url = @taginfo_config.get('level0.overpass_url_prefix') + Rack::Utils.build_query({ :data => '[out:xml];' + query + 'out meta;' })
 
@@ -152,10 +153,10 @@ def level0_url(filter, key, value)
 end
 
 def level0_link(filter, key, value = nil)
-    external_link('level0_button', 'Level0 Editor', level0_url(filter, key, value), true)
+    external_link('level0_button', 'Level0 Editor', level0_url(filter, key, value), new_window: true)
 end
 
-def external_link(id, title, link, new_window = false)
+def external_link(id, title, link, new_window: false)
     target = new_window ? 'target="_blank" ' : ''
     %(<a id="#{id}" #{target}rel="nofollow" class="extlink" href="#{link}">#{title}</a>)
 end
@@ -165,11 +166,15 @@ def wiki_link(title)
     external_link('wikilink_' + title.gsub(%r{[^A-Za-z0-9]}, '_'), title, prefix + title)
 end
 
+def clean_for_filename(str)
+    str&.gsub(/[^a-zA-Z0-9-]+/, '_')
+end
+
 # ------------------------------------------------------------------------------
 
 def tagcloud_size(tag)
-    x = tag['scale1'].to_f / 20 + tag['pos'] / 4
-    (x * 40 + 12).to_i
+    x = (tag['scale1'].to_f / 20) + (tag['pos'] / 4)
+    ((x * 40) + 12).to_i
 end
 
 def get_filter
@@ -184,7 +189,8 @@ def get_total(type)
         'all'       => 'objects',
         'nodes'     => 'nodes_with_tags',
         'ways'      => 'ways',
-        'relations' => 'relations' }[type]
+        'relations' => 'relations'
+    }[type]
 
     @db.stats(key)
 end
@@ -218,8 +224,8 @@ end
 
 # Like the 'get' method but specific for API calls, includes documentation for API calls
 def api(version, path, doc = nil, &block)
-    API.new(version, path, doc) unless doc.nil?
-    get("/api/#{version}/#{path}", &block)
+    api = API.new(version, path, doc) unless doc.nil?
+    get(api.complete_path, &block)
 end
 
 # ------------------------------------------------------------------------------
@@ -244,11 +250,11 @@ def get_description(table, attr, param, value)
                     .condition("lang=? AND #{attr}=?", lang, param)
 
         if attr == 'key'
-            if value.nil?
-                select = select.condition('value IS NULL')
-            else
-                select = select.condition('value=?', value)
-            end
+            select = if value.nil?
+                         select.condition('value IS NULL')
+                     else
+                         select.condition('value=?', value)
+                     end
         end
 
         desc = select.get_first_value
@@ -308,8 +314,7 @@ def get_wiki_result(res)
             :tags_linked      => row['tags_linked'].split(','),
             :status           => row['approval_status']
         }
-        end
-    )
+    end)
 end
 
 def paging_results(array)
@@ -369,14 +374,13 @@ def unpack_chronology(raw_data)
 end
 
 def build_link(link)
-    if (@taginfo_config.id != '')
-        '/' + @taginfo_config.id + link
-    else
+    if @taginfo_config.id == ''
         link
+    else
+        '/' + @taginfo_config.id + link
     end
 end
 
 def data_as_script(data)
     data.to_json.gsub('<', '\u003C')
 end
-

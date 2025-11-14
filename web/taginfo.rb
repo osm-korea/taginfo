@@ -9,7 +9,7 @@
 #
 #------------------------------------------------------------------------------
 #
-#  Copyright (C) 2010-2023  Jochen Topf <jochen@topf.org>
+#  Copyright (C) 2010-2025  Jochen Topf <jochen@topf.org>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,8 +27,8 @@
 #------------------------------------------------------------------------------
 
 v = RUBY_VERSION.split('.').map(&:to_i)
-if v[0] < 2 || (v[0] == 2 && v[1] < 4)
-    STDERR.puts "You need at least Ruby 2.4 to run taginfo"
+if v[0] < 3
+    STDERR.puts "You need at least Ruby 3.0 to run taginfo"
     exit(1)
 end
 
@@ -40,6 +40,7 @@ require 'json'
 require 'sqlite3'
 require 'yaml'
 require 'date'
+require 'time'
 
 require 'sinatra/base'
 require 'sinatra/r18n'
@@ -52,6 +53,7 @@ require 'lib/javascript'
 require 'lib/language'
 require 'lib/sql'
 require 'lib/sources'
+require 'lib/tagstatus'
 require 'lib/reports'
 require 'lib/api'
 require 'lib/langtag/bcp47'
@@ -67,14 +69,13 @@ SECTIONS = Hash[TAGINFO_CONFIG.get('instance.sections', ALL_SECTIONS).collect{ |
 
 class Taginfo < Sinatra::Base
 
-    register Sinatra::R18n
-
     use Rack::JSONP
 
     mime_type :opensearch, 'application/opensearchdescription+xml'
 
     configure do
         set :app_file, __FILE__
+        #set :bind, '0.0.0.0'
 
         # Disable rack-protection library because it messes up embedding
         # taginfo in an iframe. This should probably be done more
@@ -91,9 +92,9 @@ class Taginfo < Sinatra::Base
 
     # make trimming \n after %> the default in erb templates
     alias_method :erb_orig, :erb
-    def erb(template, options = {}, locals = {})
+    def erb(template, options = {}, locals = {}, &block)
         options[:trim] = '>' unless options[:trim]
-        erb_orig template, options, locals
+        erb_orig template, options, locals, &block
     end
 
     # when do we expect the next data update
@@ -106,9 +107,13 @@ class Taginfo < Sinatra::Base
         @taginfo_config = TAGINFO_CONFIG
 
         if request.cookies['taginfo_locale'] && request.path != '/switch_locale'
-            params[:locale] = request.cookies['taginfo_locale']
+            session[:locale] = request.cookies['taginfo_locale']
         end
+    end
 
+    register Sinatra::R18n
+
+    before do
         javascript_for(:taginfo)
         javascript r18n.locale.code + '/texts'
 
@@ -137,7 +142,6 @@ class Taginfo < Sinatra::Base
     #-------------------------------------
 
     before '/api/*' do
-        content_type :json, :charset => 'UTF-8'
         expires next_update
         cors = @taginfo_config.get('instance.access_control_allow_origin', '')
         if cors != ""
@@ -148,6 +152,8 @@ class Taginfo < Sinatra::Base
         rescue ArgumentError => e
             halt 412, { :error => e.message }.to_json
         end
+        content_type @ap.format, :charset => 'UTF-8'
+        @api = API.complete_paths[request.path_info]
     end
 
     #-------------------------------------
@@ -166,27 +172,18 @@ class Taginfo < Sinatra::Base
         erb :index
     end
 
-    get '/test-index' do
-        javascript "pages/test-index"
-        erb :'test-index'
-    end
-
     #-------------------------------------
 
-    %w[about sources].each do |page|
-        get '/' + page do
-            @title = t.taginfo[page]
-            section page
-            erb page.to_sym
-        end
+    get '/about' do
+        @title = t.taginfo.about
+        section :about
+        erb :about
     end
 
-    %w[help].each do |page|
-        get '/' + page do
-            @title = t.misc.help
-            section page
-            erb page.to_sym
-        end
+    get '/help' do
+        @title = t.misc.help
+        section :help
+        erb :help
     end
 
     %w[keys tags relations].each do |page|
@@ -212,7 +209,7 @@ class Taginfo < Sinatra::Base
 
         expires next_update
         content_type 'text/javascript'
-        'const texts = ' + JSON.generate(trans, { indent: '  ', object_nl:"\n" }) + ';'
+        'const texts = ' + JSON.generate(trans, { indent: '  ', object_nl: "\n" }) + ';'
     end
 
     get %r{/js/([a-z][a-z](-[a-zA-Z]+)?)/(.*).js} do |lang, _, js|
@@ -234,6 +231,7 @@ class Taginfo < Sinatra::Base
     # current API (version 4)
     load 'lib/api/v4/key.rb'
     load 'lib/api/v4/keys.rb'
+    load 'lib/api/v4/languages.rb'
     load 'lib/api/v4/project.rb'
     load 'lib/api/v4/projects.rb'
     load 'lib/api/v4/relation.rb'
@@ -244,6 +242,7 @@ class Taginfo < Sinatra::Base
     load 'lib/api/v4/tags.rb'
     load 'lib/api/v4/unicode.rb'
     load 'lib/api/v4/wiki.rb'
+    load 'lib/api/v4/wikidata.rb'
 
     # test API (unstable, do not use)
     load 'lib/api/test/langtag.rb'
@@ -256,6 +255,7 @@ class Taginfo < Sinatra::Base
     load 'lib/ui/relation.rb'
     load 'lib/ui/reports.rb'
     load 'lib/ui/search.rb'
+    load 'lib/ui/sources.rb'
     load 'lib/ui/tags.rb'
 
     SECTIONS.each_key do |section|

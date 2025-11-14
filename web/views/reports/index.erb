@@ -4,9 +4,12 @@
     <h2><%= h(t.pages.reports.list) %></h2>
     <div>
         <ul class="reportlist">
-<% Report.each_visible_with_index do |report, n| c = (n%2!=0) ? ' even' : '' %>
+<% Report.each_visible_with_index(@sources) do |report| %>
             <li><a href="<%= build_link(report.url) %>"><%= h(t.reports[report.name].name) %></a></li>
 <% end %>
+            <li><a href="<%= build_link('/sources/db') %>"><%= h(t.pages.sources.db.stats.name) %></a></li>
+            <li><a href="<%= build_link('/sources/wiki/language_comparison_table_for_keys') %>"><%= h(t.pages.sources.wiki.language_comparison_table_for_keys.name) %></a></li>
+            <li><a href="<%= build_link('/sources/wiki/image_comparison') %>"><%= h(t.pages.sources.wiki.image_comparison.name) %></a></li>
         </ul>
     </div>
 </div>

@@ -1,4 +1,3 @@
-
 osm:
     tag: タグ
     tags: タグ
@@ -143,7 +142,7 @@ pages:
         reports:
             listreports: すべてのレポートを表示...
         about:
-            intro:
+            intro: |
                 <p>OpenStreetMap は<b>キー=値</b>という形の<b>タグ</b>を使って、
                 地理的なオブジェクトに意味づけしています。
                 taginfo はこのようなタグに関する情報を様々な情報源から収集し、
@@ -162,7 +161,7 @@ pages:
                 作業することが少し難しくなることがあります。</p>
                 <p>OSM に協力するにせよ OSM のデータを利用するにせよ、次のような疑問が常に付きまといます。
                 X という地物や特徴のために人々はどのタグを使用しているのか？
-                Y という地物や特徴のために度のタグを使用すあれば、正しく地図上に現れるのか？
+                Y という地物や特徴のためにどのタグを使用すれば、正しく地図上に現れるのか？
                 ウィキで説明されている Z タグは実際に使われているのか？どこで？</p>
                 <p>taginfo は、どのタグが実際にはデータベース上にあるのか、どれだけの人がタグを使っているのか、
                 どこで使用されているのかなどを、統計を表示することでお役に立ちます。
@@ -174,8 +173,7 @@ pages:
             title: このサイトについて
         building_on_taginfo:
             title: taginfo を使った開発
-            pre: |
-                <p>taginfo からのデータを自分のプロジェクトで使うことができます。</p>
+            pre: 'taginfo からのデータを自分のプロジェクトで使うことができます。'
             api: |
                 <h3>API</h3>
                 <p>taginfo のデータには REST API を通してアクセスできます。詳細は
@@ -230,13 +228,12 @@ pages:
                 に連絡してください。</p>
     sources:
         intro: |
-            <p>taginfo はいくつかの情報源から OSM タグについてのデータを収集し、
-            見やすく探索しやすいように組み合わせます。</p>
+            taginfo はいくつかの情報源から OSM タグについてのデータを収集し、
+            見やすく探索しやすいように組み合わせます。
+            現在使用している情報源の一覧です。将来的には他の情報源も組み込むかもしれません。
+        display_only: |
             <p>なお taginfo はこのデータを表示するだけです。
             データを変更したい場合は、情報源に戻る必要があります。</p>
-        list:
-            title: 情報源の一覧
-            intro: 現在使用している情報源の一覧です。将来的には他の情報源も組み込むかもしれません。
         description:
             db: |
                 <p>キー、タグ、リレーション種別に関する統計は、 <a class="extlink" href="https://planet.openstreetmap.org/">OSM データベース</a>（またはそれを展開したもの）から作成されます。ノードやウェイの地理的な分布を表す地図も同様です。</p>
@@ -245,7 +242,7 @@ pages:
             languages: |
                 <p>taginfo は世界の各言語に関するコードや名称などの情報を、 <a class="extlink" href="https://www.iana.org/">IANA</a> や <a class="extlink" href="https://www.unicode.org/">Unicode</a> レジストリなどから取得しています。</p>
             projects: |
-                <p>OSM タグをある方法で使っている、エディタ、地図、経路検索などのプロジェクトです。<a href="projects">プロジェクト一覧</a>を参照してください。</p>
+                <p>OSM タグをある方法で使っている、エディタ、地図、経路検索などのプロジェクトです。</p>
         updates:
             title: 更新状況
             intro: taginfo データは情報源から定期的に更新されます。
@@ -253,6 +250,78 @@ pages:
         last_update_run: 更新の最終実行
         data_until_explanation: この時刻までのすべての編集がデータに含まれ、以降の編集も含まれることがあります。
         to: ～
+        languages:
+            subtags:
+                title: BCP47 サブタグ
+                filter:
+                    label: 表示するサブタグの種類
+                    all: すべて
+                    language: 言語
+                    script: 記法
+                    region: 地域
+                    variant: 派生形
+                intro: |
+                    <p><a href="https://www.ietf.org/">IETF</a> は標準「<a
+                    href="https://tools.ietf.org/html/bcp47">Tags for Identifying Languages
+                    (BCP47)</a>」の中で、<i>言語タグ</i>を規定しています。言語タグは言語、
+                    文字、派生形などを記述する1つ以上の<i>サブタグ</i>から成ります。
+                    以下の一覧は現在 OSM に関して登録されているサブタグを示します。詳しい情報は、
+                    <a href="https://ja.wikipedia.org/wiki/IETF%E8%A8%80%E8%AA%9E%E3%82%BF%E3%82%B0">
+                    ウィキペディアの IETF 言語タグの記事</a>と<a href="http://www.langtag.net/">
+                    langtag.net</a>のサイトを参照してください。</p>
+                note: |
+                    なお、この表にあるデータは OpenStreetMap からのものではなく、
+                    OSM で実際に使われているかどうかにかかわらず、言語を記述するために使われる
+                    可能性があるブロックを表示しているだけです。
+        wiki:
+            language_comparison_table_for_keys:
+                name: ウィキ上のキーの言語比較表
+                icons:
+                    template: ウィキ上にページがあり、標準テンプレートを使用している。
+                    error: ウィキ上にページがあり、標準テンプレートを使用しているが、解析できない。
+                    page: ウィキ上にページがあるが、標準テンプレートを使用していない。
+                    redirect: リダイレクトページ。
+                intro: |
+                    この表はウィキページがあるすべてのタグと、どの言語のページがあるかを表示しています。
+            parsing_problems:
+                name: ウィキ解析時の問題
+                intro: |
+                    Taginfo はタグについての情報を探すために、キー、タグ、リレーションを
+                    記述するために使われているすべてのウィキページを読み取ります。
+                    このレポートはページを読み取る際に発生した問題の一覧を表示しています。
+                    ウィキ上でのエラーを示しているのではなく、単に taginfo
+                    が理解できる書式で書かれていないものがウィキページにあるということを
+                    意味します。ページか taginfo のどちらかを修正する必要があります。
+                location: 場所
+                reason: 理由
+                wiki_page: ウィキページ
+                lang: 言語
+                info: 追加情報
+            image_comparison:
+                name: ウィキの画像
+                intro: |
+                    それぞれの言語におけるキーを象徴するためにウィキで使われている画像です。
+                    画像は同一だったり、言語によって異なったほうが良かったりします。
+                    しかし、文化的背景の違いなどによって異なる画像が使われることがわかる場合もあります。
+        db:
+            stats:
+                name: データベースの統計
+                objects_in_db: データベース中のオブジェクト数
+                tags_in_db: データベース中のタグ数
+                distinct_keys: 識別されたキー数
+                distinct_tags: 識別されたタグ数
+                nodes_in_db: データベース中のノード数
+                nodes_with_tags_in_db: 1つ以上のタグがあるノード数
+                nodes_with_tags_in_db_percent: 1つ以上のタグがあるノードの割合
+                tags_on_nodes: ノード上のタグ数
+                avg_tags_per_tagged_node: タグがあるノードあたりの平均タグ数
+                ways_in_db: データベース中のウェイ数
+                closed_ways_in_db: 閉じたウェイ数
+                tags_on_ways: ウェイ上のタグ数
+                avg_tags_per_way: ウェイあたりの平均タグ数
+                relations_in_db: データベース中のリレーション数
+                tags_on_relations: リレーション上のタグ数
+                avg_tags_per_relation: リレーションあたりの平均タグ数
     download:
         intro: |
             <p>taginfo で使われるデータベースをここからダウンロードできます。すべてのデータが
@@ -283,10 +352,10 @@ pages:
         nothing_to_compare: 比較するキーやタグがありません。キーまたはタグのページに移動して追加してください。
     keys:
         intro: |
-                この表ではデータベースやその他のリソースに存在するすべてのタグのキーを表示しています。
+            この表ではデータベースやその他のリソースに存在するすべてのタグのキーを表示しています。
     tags:
         intro: |
-                この表ではデータベース中でよく使われているタグを表示しています。
+            この表ではデータベース中でよく使われているタグを表示しています。
     relations:
         name: リレーション種別
         intro: リレーションの各種別についての情報（<a href="keys/type?filter=relations">type</a>タグで識別されるもの）です。
@@ -298,13 +367,13 @@ pages:
         empty_role: 空のロール
     projects:
         intro: |
-                この表では、OSMタグの使い方からtaginfoが把握しているすべてのプロジェクトを表示しています。<br/>この機能についての詳細は、<a href="//wiki.openstreetmap.org/wiki/Taginfo/Projects" class="extlink">ウィキ</a>を参照してください。
+            この表では、OSMタグの使い方からtaginfoが把握しているすべてのプロジェクトを表示しています。<br/>この機能についての詳細は、<a href="//wiki.openstreetmap.org/wiki/Taginfo/Projects" class="extlink">ウィキ</a>を参照してください。
     key:
         description_from_wiki: ウィキによるこのキーの説明です（選択している言語に存在する場合、なければ英語）。
         no_description_in_wiki: このキーの英語での説明がウィキにありません（"ウィキ"タブを参照してください）。
         filter:
             label: |
-                 絞り込み:
+                絞り込み:
             none: 条件なし
             nodes: ノードのみ
             ways: ウェイのみ
@@ -535,24 +604,6 @@ reports:
             title: その他のキーすべて
             intro: |
                 <p>他の分類に合わないキーです。</p>
-    database_statistics:
-        name: データベースの統計
-        objects_in_db: データベース中のオブジェクト数
-        tags_in_db: データベース中のタグ数
-        distinct_keys: 識別されたキー数
-        distinct_tags: 識別されたタグ数
-        nodes_in_db: データベース中のノード数
-        nodes_with_tags_in_db: 1つ以上のタグがあるノード数
-        nodes_with_tags_in_db_percent: 1つ以上のタグがあるノードの割合
-        tags_on_nodes: ノード上のタグ数
-        avg_tags_per_tagged_node: タグがあるノードあたりの平均タグ数
-        ways_in_db: データベース中のウェイ数
-        closed_ways_in_db: 閉じたウェイ数
-        tags_on_ways: ウェイ上のタグ数
-        avg_tags_per_way: ウェイあたりの平均タグ数
-        relations_in_db: データベース中のリレーション数
-        tags_on_relations: リレーション上のタグ数
-        avg_tags_per_relation: リレーションあたりの平均タグ数
     frequently_used_keys_without_wiki_page:
         name: よく使われているもののウィキページのないキー
         intro: |
@@ -578,15 +629,6 @@ reports:
             intro: この分布表はそれぞれの長さにおけるキーがどれだけあるかを表示しています。
             key_length: キーの長さ
             number_of_keys: キーの数
-    language_comparison_table_for_keys_in_the_wiki:
-        name: ウィキ上のキーの言語比較表
-        icons:
-            template: ウィキ上にページがあり、標準テンプレートを使用している。
-            error: ウィキ上にページがあり、標準テンプレートを使用しているが、解析できない。
-            page: ウィキ上にページがあるが、標準テンプレートを使用していない。
-            redirect: リダイレクトページ。
-        intro: |
-            この表はウィキページがあるすべてのタグと、どの言語のページがあるかを表示しています。
     languages:
         name: 言語
         intro: |
@@ -614,29 +656,6 @@ reports:
         overview:
             tab: 概要
             title: 概要
-        bcp47:
-            tab: BCP47 サブタグ
-            title: BCP47 サブタグ
-            filter:
-                label: 表示するサブタグの種類
-                all: すべて
-                language: 言語
-                script: 記法
-                region: 地域
-                variant: 派生形
-            intro: |
-                <p><a href="https://www.ietf.org/">IETF</a> は標準「<a
-                href="https://tools.ietf.org/html/bcp47">Tags for Identifying Languages
-                (BCP47)</a>」の中で、<i>言語タグ</i>を規定しています。言語タグは言語、
-                文字、派生形などを記述する1つ以上の<i>サブタグ</i>から成ります。
-                以下の一覧は現在 OSM に関して登録されているサブタグを示します。詳しい情報は、
-                <a href="https://ja.wikipedia.org/wiki/IETF%E8%A8%80%E8%AA%9E%E3%82%BF%E3%82%B0">
-                ウィキペディアの IETF 言語タグの記事</a>と<a href="http://www.langtag.net/">
-                langtag.net</a>のサイトを参照してください。</p>
-                <p>なお、この表にあるデータは OpenStreetMap からのものでは<b>なく</b>、
-                OSM で実際に使われているかどうかにかかわらず、言語を記述するために使われる
-                可能性があるブロックを表示しているだけです。
-                </p>
     similar_keys:
         name: 似たキー名
         intro: |
@@ -659,24 +678,3 @@ reports:
             title: タグの種類の数
         relation_types:
             title: リレーション種別の数
-    wiki_images:
-        name: ウィキの画像
-        intro: |
-            それぞれの言語におけるキーを象徴するためにウィキで使われている画像です。
-            画像は同一だったり、言語によって異なったほうが良かったりします。
-            しかし、文化的背景の違いなどによって異なる画像が使われることがわかる場合もあります。
-    wiki_problems:
-        name: ウィキ解析時の問題
-        intro: |
-            Taginfo はタグについての情報を探すために、キー、タグ、リレーションを
-            記述するために使われているすべてのウィキページを読み取ります。
-            このレポートはページを読み取る際に発生した問題の一覧を表示しています。
-            ウィキ上でのエラーを示しているのではなく、単に taginfo
-            が理解できる書式で書かれていないものがウィキページにあるということを
-            意味します。ページか taginfo のどちらかを修正する必要があります。
-        location: 場所
-        reason: 理由
-        wiki_page: ウィキページ
-        lang: 言語
-        info: 追加情報
-

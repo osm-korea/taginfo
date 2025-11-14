@@ -22,6 +22,14 @@
         // Sections of the website that are enabled.
         "sections": ["download", "taginfo"]
     },
+    // The project we are showing data for. Usually this is OpenStreetMap
+    // but could be something like OpenHistoricalMap.
+    "project": {
+        "url": "https://www.openstreetmap.org/",
+        "name": "OpenStreetMap",
+        "attribution_url": "https://www.openstreetmap.org/copyright",
+        "attribution_text": "Data © OSM contributors (ODbL)"
+    },
     // For the geodistribution map. See the wiki documentation about these settings.
     "geodistribution": {
         "left": 123,
@@ -74,7 +82,7 @@
         // disable Level0 Editor button if there are more than this many objects with a key/tag
         "max_results": 50,
         "overpass_url_prefix": "https://overpass-api.de/api/interpreter?",
-        "level0_url_prefix": "http://level0.osmz.ru/?"
+        "level0_url_prefix": "https://level0.osmz.ru/?"
     },
     "opensearch": {
         // For the OpenSearchDescription. You have to change at least the shortname and the contact for your instance.

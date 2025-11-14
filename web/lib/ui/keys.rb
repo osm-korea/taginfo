@@ -36,6 +36,38 @@ class Taginfo < Sinatra::Base
         @context[:key] = @key
         @context[:countAllValues] = @count_all_values
 
+        if @sources.get(:chronology)
+            @has_chronology = @db.count('keys_chronology').condition('key=?', @key).get_first_i > 0
+        end
+
+        @wikipages = @db.select("SELECT DISTINCT lang, title FROM wiki.wikipages WHERE key=? AND value IS NULL ORDER BY lang", @key).execute.map do |row|
+            lang = row['lang']
+            {
+                :lang    => lang,
+                :title   => row['title'],
+                :english => ::Language[lang].english_name,
+                :native  => ::Language[lang].native_name,
+                :dir     => direction_from_lang_code(lang)
+            }
+        end
+
+        @wikipage_en = @wikipages.find{ |row| row[:lang] == 'en' }
+
+        @projects_count = @db.select('SELECT count(distinct project_id) FROM projects.project_tags').condition('key=?', @key).get_first_i
+
+        @discardable = {}
+        status = @db.select("SELECT approval_status FROM wiki.wikipages_keys WHERE key=?", @key).get_first_value
+        @tagstatus = TagStatus[status] if status
+        @discardable[:wiki] = (status == 'discardable')
+
+        if @sources.get(:sw)
+            @discardable[:id] = false
+            @discardable[:josm] = false
+            @db.select("SELECT source FROM sw.discardable_tags WHERE key=?", @key).execute.each do |row|
+                @discardable[row['source'].to_sym] = true
+            end
+        end
+
         javascript_for(:d3)
         javascript "pages/key"
         erb :key

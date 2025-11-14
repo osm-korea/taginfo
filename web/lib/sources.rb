@@ -42,7 +42,7 @@ class Source
     # Create new source
     #  id - Symbol with id for this source
     #  name - Name of this source
-    def initialize(data_dir, download_dir, id, name, data_until, update_start, update_end, visible)
+    def initialize(data_dir, download_dir, id, name, data_until, update_start, update_end, visible) # rubocop:disable Metrics/ParameterLists
         @id           = id.to_sym
         @name         = name
         @data_until   = data_until
@@ -50,8 +50,8 @@ class Source
         @update_end   = update_end
         @visible      = visible
 
-        @dbsize = File.size("#{ data_dir }/#{ dbname }").to_bytes rescue 0
-        @dbpack = File.size("#{ download_dir }/#{ dbname }.bz2").to_bytes rescue 0
+        @dbsize = File.size?("#{ data_dir }/#{ dbname }")&.to_bytes
+        @dbpack = File.size?("#{ download_dir }/#{ dbname }.bz2")&.to_bytes
     end
 
     def dbname
@@ -60,6 +60,10 @@ class Source
 
     def link_download
         %(<a rel="nofollow" href="/download/#{ dbname }.bz2">#{ dbname }.bz2</a>)
+    end
+
+    def update_duration
+        ((Time.parse(update_end) - Time.parse(update_start)) / 60).round
     end
 
 end

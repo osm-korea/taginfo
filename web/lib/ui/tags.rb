@@ -62,6 +62,25 @@ class Taginfo < Sinatra::Base
         @context[:key] = @key
         @context[:value] = @value
 
+        if @has_rtype_link || !@links.empty?
+            @has_link_box = true
+        end
+
+        @wikipages = @db.select("SELECT DISTINCT lang, title FROM wiki.wikipages WHERE key=? AND value=? ORDER BY lang", @key, @value).execute.map do |row|
+            lang = row['lang']
+            {
+                :lang    => lang,
+                :title   => row['title'],
+                :english => ::Language[lang].english_name,
+                :native  => ::Language[lang].native_name,
+                :dir     => direction_from_lang_code(lang)
+            }
+        end
+
+        @wikipage_en = @wikipages.find{ |row| row[:lang] == 'en' }
+
+        @projects_count = @db.select('SELECT count(distinct project_id) FROM projects.project_tags').condition('key=? AND value=?', @key, @value).get_first_i
+
         javascript_for(:d3)
         javascript "pages/tag"
         erb :tag

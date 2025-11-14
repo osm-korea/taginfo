@@ -2,7 +2,8 @@
 
 var tabs = null,
     autocomplete = null,
-    up = function() { window.location = build_link('/'); };
+    questionMarkKeycode = null,
+    up = null;
 
 const bad_chars_for_url = /[.=\/@]/;
 const bad_chars_for_keys = '!"#$%&()*+,/;<=>?@[\\]^`{|}~' + "'";
@@ -430,7 +431,7 @@ function h(text) {
 }
 
 function highlight(str, query) {
-    return html_escape(str).replace(new RegExp('(' + html_escape(query) + ')', 'gi'), "<b>$1</b>");
+    return html_escape(str).replaceAll(html_escape(query), "<b>$&</b>");
 }
 
 function set_inner_html_to(id, html) {
@@ -499,9 +500,9 @@ function fmt_desc(lang, dir, desc) {
 
 function fmt_status(status) {
     if (status === null) {
-        return '';
+        return '<i>(none)</i>';
     }
-    return html_escape(status);
+    return '<a class="tagstatus tagstatus-' + html_escape(status.replace(/[^a-z]+/, '-')) + '" href="' + build_link('/sources/wiki/tag_status') + '">' + html_escape(status) + '</a>';
 }
 
 function fmt_role(role) {
@@ -698,6 +699,16 @@ function fmt_project_tag_desc(description, icon, url) {
     return out;
 }
 
+function fmt_wikidata_item(item, description) {
+    let url = 'https://www.wikidata.org/wiki/';
+    if (item[0] == 'P') {
+        url += 'Property:' + encodeURI(item);
+    } else {
+        url += encodeURI(item);
+    }
+    return link(url, html_escape(item), { target: '_blank', 'class': 'extlink' }) + ' \u00b7 ' + description;
+}
+
 /* ============================ */
 
 class DynamicTableColumn {
@@ -829,7 +840,7 @@ class DynamicTable {
         }
         this.initTable();
 
-        this.element.classList.add('dynamic-table');
+        this.element.classList.add('dt-container');
     }
 
     page(rowNum) {
@@ -866,11 +877,16 @@ class DynamicTable {
 
     initToolbar() {
         let tools = [];
-        for (const toolClasses of ['dt-first dt-button', 'dt-prev dt-button',
+        for (const toolClasses of ['dt-first dt-button key-tooltip',
+                                   'dt-prev dt-button key-tooltip',
                                    'dt-page',
-                                   'dt-next dt-button', 'dt-last dt-button',
-                                   'dt-reload dt-button', 'dt-json no-print',
-                                   'dt-info', 'dt-search']) {
+                                   'dt-next dt-button key-tooltip',
+                                   'dt-last dt-button key-tooltip',
+                                   'dt-reload dt-button',
+                                   'dt-json dt-api no-print',
+                                   'dt-csv dt-api no-print',
+                                   'dt-info',
+                                   'dt-search key-tooltip']) {
             const newElement = document.createElement('div');
             newElement.className = toolClasses;
             tools.push(newElement);
@@ -904,6 +920,10 @@ class DynamicTable {
 
         tools[6].innerHTML = '<a href="" target="_blank">JSON</a>';
 
+        if (this.config.csv) {
+            tools[7].innerHTML = '<a href="" target="_blank">CSV</a>';
+        }
+
         if (this.hasSearch()) {
             this.queryInput = document.createElement('input');
             this.queryInput.className = 'qsbox';
@@ -928,7 +948,7 @@ class DynamicTable {
                 }
             });
 
-            tools[8].append(this.queryInput);
+            tools[9].append(this.queryInput);
         }
 
         this.toolbar = document.createElement('div');
@@ -972,8 +992,9 @@ class DynamicTable {
         const rowEnd = 'span ' + (numRows + 1);
         for (let i = 1; i < this.columns.length; i++) {
             const handle = document.createElement('div');
+            handle.classList.add('dt-handle-handle');
             const element = document.createElement('div');
-            element.classList.add('dt-handle');
+            element.classList.add('dt-handle-space');
             element.append(handle);
             element.style.gridColumnStart = i * 2;
             element.style.gridRowEnd = rowEnd;
@@ -1069,7 +1090,8 @@ class DynamicTable {
             if (this.toolbar) {
                 this.toolbar.querySelector('.dt-page input').value = '0';
                 this.toolbar.querySelector('.dt-page span.dt-page-max').innerText = '0';
-                this.toolbar.querySelector('.dt-json a').setAttribute('href', data.url);
+                this.toolbar.querySelector('.dt-json a').setAttribute('href', build_link(data.url));
+                this.toolbar.querySelector('.dt-csv a')?.setAttribute('href', build_link(data.url + '&format=csv'));
                 this.toolbar.querySelector('.dt-info').innerText = texts.dynamic_table.nomsg;
             }
 
@@ -1098,7 +1120,8 @@ class DynamicTable {
         if (this.toolbar) {
             this.toolbar.querySelector('.dt-page input').value = this.currentPage + 1;
             this.toolbar.querySelector('.dt-page span.dt-page-max').innerText = this.maxPage;
-            this.toolbar.querySelector('.dt-json a').setAttribute('href', data.url);
+            this.toolbar.querySelector('.dt-json a').setAttribute('href', build_link(data.url));
+            this.toolbar.querySelector('.dt-csv a')?.setAttribute('href', build_link(data.url + '&format=csv'));
 
             this.toolbar.querySelector('.dt-info').innerHTML = this.fromToMessage();
         }
@@ -1225,8 +1248,12 @@ class DynamicTable {
             element.classList.remove('dt-current-row');
         }
 
-        for (const element of this.elementsInRow(this.rowOnPage)) {
-            element.classList.add('dt-current-row');
+        const currentRow = this.elementsInRow(this.rowOnPage);
+        if (currentRow.length > 0) {
+            for (const element of currentRow) {
+                element.classList.add('dt-current-row');
+            }
+            currentRow[0].classList.add('key-tooltip');
         }
     }
 
@@ -1360,7 +1387,9 @@ class Tabs {
             tab.style.display = 'none';
         }
         this.tabs[n].style.display = 'block';
-        window.location.hash = this.tabs[n].id;
+        if (n > 0 || window.location.hash != '') {
+            window.location.hash = this.tabs[n].id;
+        }
 
         for (const widget of this.widgets[this.currentTab]) {
             if (this.state[this.currentTab] == 'resize') {
@@ -1548,6 +1577,12 @@ class ComparisonListDisplay {
         list.load();
         this.update();
 
+        document.addEventListener('keyup', (event) => {
+            if (event.key == '+') {
+                list.add(keyOrTag); list.store(); this.update();
+            }
+        });
+
         document.getElementById('comparison-list-add').addEventListener('click', () => { list.add(keyOrTag); list.store(); this.update(); });
         document.getElementById('comparison-list-clear').addEventListener('click', () => { list.clear(); list.store(); this.update(); });
         document.getElementById('comparison-list-compare').addEventListener('click', () => { list.compare(); });
@@ -1633,8 +1668,8 @@ class Autocomplete {
         this.element = document.getElementById(id);
         this.results = document.getElementById(results);
         this.source = build_link('/search/suggest?format=simple&term=');
-        this.element.addEventListener('input', this.trigger.bind(this));
-        this.element.parentNode.addEventListener('keydown', this.key.bind(this));
+        this.element?.addEventListener('input', this.trigger.bind(this));
+        this.element?.parentNode.addEventListener('keydown', this.key.bind(this));
     }
 
     trigger(event) {
@@ -1718,10 +1753,12 @@ class Autocomplete {
 /* ============================ */
 
 function whenReady() {
-    document.getElementById('javascriptmsg').remove();
-
     if (document.getElementById('tabs')) {
         tabs = new Tabs('tabs');
+    }
+
+    for (const el of document.getElementsByClassName('tagstatus')) {
+        el.setAttribute('href', build_link('/sources/wiki/tag_status'));
     }
 
     if (typeof page_init === 'function') {
@@ -1736,12 +1773,16 @@ function whenReady() {
     initTooltips();
 
     // Initialize language switcher
-    document.getElementById('locale').addEventListener('change', function() {
+    document.getElementById('locale')?.addEventListener('change', function() {
         document.getElementById('url').value = window.location.pathname;
         document.getElementById('set_language').submit();
     });
 
     autocomplete = new Autocomplete('search', 'suggestions');
+
+    window.addEventListener('popstate', function(event) {
+        tabs?.setTabFromURL();
+    })
 
     document.addEventListener('keypress', function(event) {
         if (event.ctrlKey || event.altKey || event.metaKey) {
@@ -1757,6 +1798,9 @@ function whenReady() {
                 const cl = new ComparisonList();
                 cl.load();
                 window.location = cl.url();
+                break;
+            case 'd':
+                window.location = build_link('/sources');
                 break;
             case 'f':
                 event.preventDefault();
@@ -1789,36 +1833,60 @@ function whenReady() {
         }
     });
 
-    document.addEventListener('keyup', function(event) {
-        if (event.ctrlKey || event.altKey || event.metaKey) {
-            return;
-        }
+    if (window.location.pathname != '/') {
+        document.addEventListener('keyup', function(event) {
+            if (event.ctrlKey || event.altKey || event.metaKey) {
+                return;
+            }
 
-        if (event.target != document.body) {
-            return;
-        }
+            if (event.target != document.body) {
+                return;
+            }
 
-        if (event.key == 'ArrowLeft') {
-            event.preventDefault();
-            up();
-        }
-    });
+            if (event.key == 'ArrowLeft') {
+                event.preventDefault();
+                if (up) {
+                    up();
+                    return;
+                }
+                window.location.pathname = window.location.pathname.replace(/\/[^/]*$/, '');
+            }
+        });
+    }
 
     document.addEventListener('keydown', function(event) {
+        if (event.target == document.body && event.key == '?' && window.innerWidth >= 1000) {
+            if (event.repeat) {
+                return;
+            }
+            questionMarkKeycode = event.keyCode;
+            event.preventDefault();
+            document.documentElement.style.setProperty('--key-info-visibility', 'visible');
+            return;
+        }
         if (event.target == document.body && event.key == 'Tab') {
             event.preventDefault();
             document.getElementById('search').focus();
         }
+        questionMarkKeycode = null;
+        document.documentElement.style.removeProperty('--key-info-visibility');
     });
 
-    document.getElementById('search').addEventListener('keyup', function(event) {
+    document.addEventListener('keyup', function(event) {
+        questionMarkKeycode = null;
+        document.documentElement.style.removeProperty('--key-info-visibility');
+    });
+
+    const search_element = document.getElementById('search');
+
+    search_element?.addEventListener('keyup', function(event) {
         if (event.key == 'Escape') {
             event.preventDefault();
             this.blur();
         }
     });
 
-    document.getElementById('search').addEventListener('keydown', function(event) {
+    search_element?.addEventListener('keydown', function(event) {
         if (event.key == 'Tab') {
             event.preventDefault();
             for (const element of document.querySelectorAll('input.qsbox')) {
@@ -1827,23 +1895,25 @@ function whenReady() {
         }
     });
 
-    document.getElementById('search_form').addEventListener('submit', function(event) {
+    document.getElementById('search_form')?.addEventListener('submit', function(event) {
         if (document.getElementById('search').value == '') {
             event.preventDefault();
         }
     });
 
     const menu_button = document.getElementById('menu-button');
-    menu_button.addEventListener('click', () => {
-        const menu = document.getElementById('menu');
-        if (menu.style.display) {
-            menu.style.display = null;
-            menu_button.classList.remove('active');
-        } else {
-            menu.style.display = 'block';
-            menu_button.classList.add('active');
-        }
-    });
+    if (menu_button) {
+        menu_button.addEventListener('click', () => {
+            const menu = document.getElementById('menu');
+            if (menu.style.display) {
+                menu.style.display = null;
+                menu_button.classList.remove('active');
+            } else {
+                menu.style.display = 'block';
+                menu_button.classList.add('active');
+            }
+        });
+    }
 
     const tools_button = document.getElementById('toolsmenu');
     if (tools_button) {
@@ -1859,16 +1929,19 @@ function whenReady() {
 }
 
 class ChartChronology {
-    id = 'chart-chronology';
+    id;
     element;
     url;
     filter;
     data;
+    height;
 
-    constructor(url, filter) {
+    constructor(id, url, filter, height) {
+        this.id = id;
         this.element = document.getElementById(this.id);
         this.url = url;
         this.filter = filter;
+        this.height = height;
     }
 
     async load() {
@@ -1914,9 +1987,9 @@ class ChartChronology {
         this.element.innerHTML = '';
 
         const boxWidth = this.element.getBoundingClientRect().width;
-        const w = Math.min(900, boxWidth - 100);
-        const h = 400;
-        const margin = { top: 10, right: 15, bottom: 60, left: 80 };
+        const w = Math.min(900, boxWidth - 60);
+        const h = this.height;
+        const margin = { top: 10, right: 15, bottom: 30, left: 45 };
 
         const t0 = this.data[0].date;
         const t1 = this.data[this.data.length - 1].date;
@@ -1928,11 +2001,16 @@ class ChartChronology {
                          .range([0, w]);
 
         const axisX = d3.axisBottom(scaleX)
+                        .ticks(w / 80)
                         .tickFormat(d3.timeFormat(w > 500 ? '%b %Y' : '%Y'));
 
         const scaleY = d3.scaleLinear()
                          .domain([0, max])
                          .range([h, 0]);
+
+        const axisY = d3.axisLeft(scaleY)
+                        .ticks(h / 40)
+                        .tickFormat(d3.formatPrefix(",.0f", max / (h / 40)));
 
         const line = d3.line()
                        .curve(d3.curveStepAfter)
@@ -1962,7 +2040,7 @@ class ChartChronology {
         chart.append('g')
              .attr('class', 'y axis')
              .attr('transform', 'translate(-5, 0)')
-             .call(d3.axisLeft(scaleY));
+             .call(axisY);
 
         chart.append('path')
              .datum(this.data)

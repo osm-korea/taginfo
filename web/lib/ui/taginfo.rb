@@ -11,23 +11,23 @@ class Taginfo < Sinatra::Base
         end.inject(0, :+)
     end
 
-    def i18n_walk(line, level, path, en, other)
+    def i18n_walk(line, level, path, lang_en, other_lang)
         out = ''
-        en.keys.sort.each do |key|
+        lang_en.keys.sort.each do |key|
             name = path.sub(/^\./, '') + '.' + key
             name.sub!(/^\./, '')
-            if en[key].instance_of?(Hash)
-                if other.nil?
+            if lang_en[key].instance_of?(Hash)
+                if other_lang.nil?
                     out += line.call(level, "<b>#{key}</b>", name, '', '<span style="color: red;">MISSING</span>')
                 else
                     out += line.call(level, "<b>#{key}</b>", name, '', '')
-                    out += i18n_walk(line, level + 1, path + '.' + key, en[key], other[key])
+                    out += i18n_walk(line, level + 1, path + '.' + key, lang_en[key], other_lang[key])
                 end
             else
-                out += if other.nil? || !other[key]
-                           line.call(level, key, name, en[key], '<span style="color: red;">MISSING</span>')
+                out += if other_lang.nil? || !other_lang[key]
+                           line.call(level, key, name, lang_en[key], '<span style="color: red;">MISSING</span>')
                        else
-                           line.call(level, key, name, en[key], other[key])
+                           line.call(level, key, name, lang_en[key], other_lang[key])
                        end
             end
         end
@@ -110,10 +110,9 @@ class Taginfo < Sinatra::Base
             @error = "Unknown language: #{@lang}"
         end
 
-        c = 'even'
         @line = lambda { |level, key, name, en, other|
-            c = (c == '') ? 'even': ''
-            "<tr><td class='#{c}' style='padding-left: #{ level * 16 + 6 }px;'><span data-tooltip-position='OnRight' title='#{ name }'>#{ key }</span></td><td class='#{c}'>#{ en }</td><td class='#{c}' lang='#{@lang}' dir='#{direction_from_lang_code(@lang)}'>#{ other }</td></tr>"
+            with_html = en.include?('<') ? 'with-html' : ''
+            "<tr><td class='#{ with_html }' style='padding-left: #{ (level * 16) + 6 }px;'><span data-tooltip-position='OnRight' title='#{ name }'>#{ key }</span></td><td>#{ en.gsub(/(%[0-9])/, '<span class="parameter">\1</span>') }</td><td lang='#{@lang}' dir='#{direction_from_lang_code(@lang)}'>#{ other.gsub(/(%[0-9])/, '<span class="parameter">\1</span>') }</td></tr>"
         }
 
         javascript "pages/taginfo/i18n"
@@ -178,19 +177,6 @@ class Taginfo < Sinatra::Base
         end
 
         erb :'taginfo/taglinks'
-    end
-
-    get '/taginfo/wiki-problems' do
-        @title = 'Wiki problems'
-        @section = 'taginfo'
-        @section_title = t.taginfo.meta
-
-        @stats_reason = @db.select("SELECT reason, count(*) AS count FROM wiki.problems GROUP BY reason ORDER BY reason").execute
-        @stats_lang   = @db.select("SELECT lang,   count(*) AS count FROM wiki.problems GROUP BY lang   ORDER BY lang").execute
-
-        javascript_for(:d3)
-        javascript "pages/taginfo/wiki-problems"
-        erb :'taginfo/wiki-problems'
     end
 
 end
